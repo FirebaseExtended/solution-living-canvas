@@ -19,7 +19,7 @@
 		"body-parser": "^1.20.2",
 		"cors": "^2.8.5",
 		"dotenv": "^16.3.1",
-		"express": "^4.21.2",
+		"express": "^4.22.1",
 		"ffmpeg-static": "^5.2.0",
 		"js-md5": "^0.8.3",
 		"sharp": "^0.34.1"

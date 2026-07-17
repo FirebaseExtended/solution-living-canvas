@@ -148,7 +148,7 @@
       <div class="selector-box">
         <button class="selector-trigger" type="button">
           <span class="selected-text">{{ getSelectedLabel('imageGenerator') }}</span>
-          <span class="options-hint">+5 models ▾</span>
+          <span class="options-hint">+8 models ▾</span>
         </button>
         <div class="selector-menu">
           <div class="selector-header">Image Models</div>
@@ -173,6 +173,15 @@
           <div class="selector-header">Local Models</div>
           <div class="selector-option" (click)="setConfig('imageGenerator', 'gemma-cga')" [class.active]="gameSettings.imageGenerator === 'gemma-cga'">
             Gemma CGA Pixel Art (MediaPipe)
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemma-anim')" [class.active]="gameSettings.imageGenerator === 'gemma-anim'">
+            Gemma Animation (4-Frame)
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemma-diffusion')" [class.active]="gameSettings.imageGenerator === 'gemma-diffusion'">
+            DiffusionGemma (MediaPipe)
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemma-diff-anim')" [class.active]="gameSettings.imageGenerator === 'gemma-diff-anim'">
+            DiffusionGemma Animation (4-Frame)
           </div>
         </div>
       </div>

@@ -956,7 +956,7 @@ export class LivingCanvasStage extends Scene {
       }
 
       // Handle different response types based on backend
-      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim') {
+      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim' || generatorType === 'gemma-anim' || generatorType === 'gemma-diff-anim') {
         // For Veo and Omni, we expect a JSON response with a hash
         const result = await response.json();
         if (result.error) {
@@ -991,11 +991,14 @@ export class LivingCanvasStage extends Scene {
         break;
       case 'imagen':
       case 'gemma-cga':
+      case 'gemma-diffusion':
         this.logImagenGenerationResponse('data:image/png;base64,' + imageData);
         break;
       case 'veo':
       case 'omni':
       case 'gemini-anim':
+      case 'gemma-anim':
+      case 'gemma-diff-anim':
         this.logVeoGenerationResponse('data:image/png;base64,' + imageData);
         break;
     }
@@ -1095,7 +1098,7 @@ export class LivingCanvasStage extends Scene {
       // ...
       // [END process_canvas]
 
-      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim') {
+      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim' || generatorType === 'gemma-anim' || generatorType === 'gemma-diff-anim') {
         // Handle Veo/Omni animation
         const hash = generatedImageData;
         const staticImageUrl = this.constructServerUrl(
@@ -2307,6 +2310,8 @@ export class LivingCanvasStage extends Scene {
       case 'veo':
       case 'omni':
       case 'gemini-anim':
+      case 'gemma-anim':
+      case 'gemma-diff-anim':
         // Imagen particles for image generation step
         sparkleTexture = 'imagen_sparkle';
         break;

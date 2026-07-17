@@ -990,6 +990,7 @@ export class LivingCanvasStage extends Scene {
         this.logGeminiGenerationResponse('data:image/png;base64,' + imageData);
         break;
       case 'imagen':
+      case 'gemma-cga':
         this.logImagenGenerationResponse('data:image/png;base64,' + imageData);
         break;
       case 'veo':

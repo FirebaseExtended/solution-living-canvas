@@ -56,7 +56,7 @@ export class MainMenu extends Scene {
       .setOrigin(0.5);
 
     this.input.once('pointerdown', () => {
-      this.scene.start('StageClean');
+      this.scene.start('IOPuzzle_Fire');
     });
   }
 }

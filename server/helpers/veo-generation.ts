@@ -24,6 +24,7 @@ import path from "path";
 import util from "util";
 import { applyRoundedCornersAndBorder, resizeImage } from "./image-processing";
 import { generateImageBuffer } from "./imagen-generation";
+import { generateImageWithGemini } from "./gemini-generation";
 import ffmpeg from "ffmpeg-static";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
@@ -83,13 +84,6 @@ export async function generateStaticImage(
     const resizedBuffer = fs.readFileSync(filepathSmall);
     const resizedBase64 = resizedBuffer.toString("base64");
 
-    // Start video generation in the background
-    generateVideoAndFrames(hash, filepath, objectType, visualStyle).catch(
-      (error) => {
-        console.error("Error in background video generation:", error);
-      }
-    );
-
     return { hash, processedImage: resizedBase64, filepathOriginal };
   } catch (error) {
     console.error("Error in generateStaticImage:", error);
@@ -102,7 +96,8 @@ export async function generateVideoAndFrames(
   hash: string,
   filepath: string,
   objectType?: string,
-  visualStyle?: string
+  visualStyle?: string,
+  backend: string = "veo"
 ): Promise<void> {
   try {
     // If objectType and visualStyle are not provided, try to extract from filepath
@@ -212,23 +207,21 @@ export async function generateVideoAndFrames(
       return;
     }
 
-    // Only proceed with Veo generation if we have no cached content
+    // Only proceed with generation if we have no cached content
     console.log(
-      `No cached content found, proceeding with Veo generation for ${objectType} in ${visualStyle} style`
+      `No cached content found, proceeding with generation for ${objectType} in ${visualStyle} style (backend: ${backend})`
     );
+
+    if (backend === "gemini-anim") {
+      await generateGeminiAnimFrames(hash, filepath, objectType, visualStyle);
+      return;
+    }
 
     // [START video_generation]
     
-    // "veo_generation": "veo-2.0-generate-001"
-    const modelId = aiConfig.models["veo_generation"];
-
-    // "veo_generation": "Show the subject gently moving or
-    // floating in place, always fully visible and centered,
-    // with no zoom, no cropping, and no added borders. The
-    // background should remain clean and consistent.
-    // The animation should be subtle and natural, preserving
-    // the original composition of the image."
-    const prompt = aiConfig.prompts["veo_generation"];
+    const modelKey = backend === "omni" ? "omni_generation" : "veo_generation";
+    const modelId = aiConfig.models[modelKey] || (backend === "omni" ? "omni-2.0-generate-001" : "veo-2.0-generate-001");
+    const prompt = aiConfig.prompts[modelKey] || aiConfig.prompts["veo_generation"];
     const imageBuffer = fs.readFileSync(filepath);
 
     // Pad to 9:16 aspect ratio (e.g., 1080x1920)
@@ -251,8 +244,7 @@ export async function generateVideoAndFrames(
       },
       config: {
         aspectRatio: "9:16",
-        numberOfVideos: 1,
-        durationSeconds: 5,
+        durationSeconds: 4,
         // @ts-ignore
         prompt: prompt,
       },
@@ -292,7 +284,7 @@ export async function generateVideoAndFrames(
 
     // Extract frames from the video
     const frameCount = 4;
-    const videoDuration = 5;
+    const videoDuration = 4;
     const epsilon = 0.05;
     const timestamps = Array.from({ length: frameCount }, (_, i) =>
       i === frameCount - 1
@@ -559,4 +551,111 @@ async function getOrCreateImagenPoolImage(
   }
   const imageBuffer = fs.readFileSync(cachePath);
   return imageBuffer.toString("base64");
+}
+
+async function generateGeminiAnimFrames(
+  hash: string,
+  filepath: string,
+  objectType: string,
+  visualStyle: string
+): Promise<void> {
+  console.log(
+    `Generating 4-frame Gemini animation for ${objectType} in ${visualStyle} style...`
+  );
+  const generatedDir = "generated";
+  if (!fs.existsSync(generatedDir))
+    fs.mkdirSync(generatedDir, { recursive: true });
+
+  const framesData: string[] = [];
+
+  // Frame 0: original static image
+  const frame0Path = path.join(generatedDir, `output_${hash}_frame0.png`);
+  fs.copyFileSync(filepath, frame0Path);
+  const processedFrame0Path = frame0Path + "_rounded.png";
+  await applyRoundedCornersAndBorder(frame0Path, processedFrame0Path);
+  fs.renameSync(processedFrame0Path, frame0Path);
+  framesData.push(fs.readFileSync(frame0Path).toString("base64"));
+
+  let lastFrameImageData = fs.readFileSync(filepath).toString("base64");
+
+  // Generate frames 1, 2, 3 sequentially using Gemini
+  for (let i = 1; i < 4; i++) {
+    console.log(`Generating Gemini animation frame ${i} for ${objectType}...`);
+    const currentFramePath = path.join(
+      generatedDir,
+      `output_${hash}_frame${i}.png`
+    );
+    await generateImageWithGemini(
+      "gemini_anim_frame",
+      objectType,
+      lastFrameImageData,
+      visualStyle,
+      currentFramePath
+    );
+
+    const rawFrameBuffer = fs.readFileSync(currentFramePath);
+    lastFrameImageData = rawFrameBuffer.toString("base64");
+
+    const processedFramePath = currentFramePath + "_rounded.png";
+    await applyRoundedCornersAndBorder(currentFramePath, processedFramePath);
+    fs.renameSync(processedFramePath, currentFramePath);
+
+    framesData.push(fs.readFileSync(currentFramePath).toString("base64"));
+  }
+
+  // Ping-pong loop sequence: 0 -> 1 -> 2 -> 3 -> 2 -> 1
+  const frame4Path = path.join(generatedDir, `output_${hash}_frame4.png`);
+  const frame5Path = path.join(generatedDir, `output_${hash}_frame5.png`);
+  fs.copyFileSync(
+    path.join(generatedDir, `output_${hash}_frame2.png`),
+    frame4Path
+  );
+  fs.copyFileSync(
+    path.join(generatedDir, `output_${hash}_frame1.png`),
+    frame5Path
+  );
+
+  const pingPongFramesData = [
+    framesData[0],
+    framesData[1],
+    framesData[2],
+    framesData[3],
+    framesData[2],
+    framesData[1],
+  ];
+
+  // Cache ping-pong frames
+  await cacheManager.cacheFrames(objectType, visualStyle, pingPongFramesData);
+
+  // Create MP4 video from processed frames using ffmpeg (frames 0..5)
+  console.log(`Creating MP4 ping-pong video for Gemini animation...`);
+  const videoPath = path.join(generatedDir, `output_${hash}.mp4`);
+  const framePattern = path.join(generatedDir, `output_${hash}_frame%d.png`);
+  await new Promise<void>((resolve, reject) => {
+    const ffmpegProcess = spawn(ffmpeg as string, [
+      "-framerate",
+      "2",
+      "-i",
+      framePattern,
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-vf",
+      "fps=24",
+      "-y",
+      videoPath,
+    ]);
+
+    ffmpegProcess.stderr?.on("data", (data) => {
+      console.log(`ffmpeg video creation: ${data.toString()}`);
+    });
+
+    ffmpegProcess.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`FFmpeg video creation exited with code ${code}`));
+    });
+
+    ffmpegProcess.on("error", (err) => reject(err));
+  });
 }

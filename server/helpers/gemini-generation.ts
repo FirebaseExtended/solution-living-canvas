@@ -16,11 +16,12 @@
 
 import { GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import fs from "fs";
+import sharp from "sharp";
 import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
 
-const { projectId, location } = getGoogleCloudConfig();
+const { projectId, location, apiKey } = getGoogleCloudConfig();
 
 interface GenerationConfig {
   maxOutputTokens: number;
@@ -47,12 +48,14 @@ interface GeminiResponse {
   }>;
 }
 
-// Initialize Vertex with your Cloud project and location
-const ai = new GoogleGenAI({
-  vertexai: true,
-  project: projectId,
-  location: location || "us-central1",
-});
+// Initialize GoogleGenAI client with apiKey or Vertex AI config
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId,
+      location: location || "us-central1",
+    });
 
 // Set up generation config
 const generationConfig: GenerationConfig = {
@@ -138,25 +141,32 @@ export async function generateImageWithGemini(
   filepath: string
 ): Promise<string> {
   try {
-    // Check cache first
-    const cachedResult = await cacheManager.getCachedImage(
-      objectType,
-      visualStyle,
-      "gemini"
-    );
-    if (
-      cachedResult.success &&
-      cachedResult.data &&
-      typeof cachedResult.data === "string"
-    ) {
-      console.log(
-        `Using cached image for ${objectType} in ${visualStyle} style`
+    if (inputImageData && inputImageData.startsWith("data:image/png;base64,")) {
+      inputImageData = inputImageData.slice(22);
+    }
+    const hasInputImage = Boolean(inputImageData && inputImageData.trim().length > 0);
+
+    // Check cache first only if no user input image was provided
+    if (!hasInputImage) {
+      const cachedResult = await cacheManager.getCachedImage(
+        objectType,
+        visualStyle,
+        "gemini"
       );
-      fs.writeFileSync(filepath, Buffer.from(cachedResult.data, "base64"));
-      return filepath;
+      if (
+        cachedResult.success &&
+        cachedResult.data &&
+        typeof cachedResult.data === "string"
+      ) {
+        console.log(
+          `Using cached image for ${objectType} in ${visualStyle} style`
+        );
+        fs.writeFileSync(filepath, Buffer.from(cachedResult.data, "base64"));
+        return filepath;
+      }
     }
 
-    // If no cache hit, proceed with generation
+    // If no cache hit or input image provided, proceed with generation
     const model = aiConfig.models["generation_gemini"];
     if (!model) {
       throw new Error("Gemini model configuration not found");
@@ -171,10 +181,6 @@ export async function generateImageWithGemini(
       model: model,
       config: generationConfig as GenerateContentConfig,
     });
-
-    if (inputImageData.startsWith("data:image/png;base64,")) {
-      inputImageData = inputImageData.slice(22);
-    }
 
     const response = await sendGeminiMessage(
       vertexChat,
@@ -194,14 +200,18 @@ export async function generateImageWithGemini(
       throw new Error("Invalid response format from Gemini API");
     }
 
-    const generatedImageData =
+    const rawImageData =
       response.candidates[0].content.parts[0].inlineData.data;
 
-    // ...
-    // [END image_generation]
+    // Force 1:1 square aspect ratio (512x512)
+    const rawBuffer = Buffer.from(rawImageData, "base64");
+    const squareBuffer = await sharp(rawBuffer)
+      .resize(512, 512, { fit: "cover" })
+      .toBuffer();
+    const generatedImageData = squareBuffer.toString("base64");
 
     // Save to file
-    fs.writeFileSync(filepath, generatedImageData, "base64");
+    fs.writeFileSync(filepath, squareBuffer);
 
     if (!fs.existsSync(filepath)) {
       throw new Error("Failed to save generated image");
@@ -229,18 +239,18 @@ async function sendGeminiMessage(
   inputImageData: string
 ): Promise<GeminiResponse> {
   try {
+    const messageParts: any[] = [{ text: textData }];
+    if (inputImageData && inputImageData.trim().length > 0) {
+      messageParts.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: inputImageData,
+        },
+      });
+    }
+
     const response = await vertexChat.sendMessage({
-      message: [
-        {
-          text: textData,
-        },
-        {
-          inlineData: {
-            mimeType: "image/png",
-            data: inputImageData,
-          },
-        },
-      ],
+      message: messageParts,
     });
 
     if (!response) {

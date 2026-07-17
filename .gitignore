@@ -30,3 +30,10 @@ dist-ssr
 
 # Angular clients
 client/.angular
+server/.env
+
+# Build output directories
+/server/dist
+/server/public
+/client/dist
+

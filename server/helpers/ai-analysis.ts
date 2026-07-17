@@ -287,7 +287,7 @@ async function sendMultimodalRequest(
   textPrompt: string,
   base64Image: string | false,
   schemaType: string,
-  model: string = "gemini-2.0-flash-exp"
+  model: string = aiConfig.models["analysis_gemini"] || "gemini-2.5-flash"
 ): Promise<string> {
   try {
     if (!textPrompt) {

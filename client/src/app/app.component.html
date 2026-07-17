@@ -201,6 +201,56 @@
           />
           <label for="gemini-anim" class="option-label">Gemini 3.1 Animation (4-Frame)</label>
         </div>
+        <div>
+          <input
+            type="radio"
+            id="gemma-cga"
+            name="imageGenerator"
+            value="gemma-cga"
+            (click)="setConfig('imageGenerator', 'gemma-cga')"
+            [checked]="gameSettings.imageGenerator === 'gemma-cga'"
+          />
+          <label for="gemma-cga" class="option-label">Gemma CGA Pixel Art (MediaPipe)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label class="group-label">Image-to-text analysis</label>
+      <div class="options-container">
+        <div>
+          <input
+            type="radio"
+            id="analysis-gemini"
+            name="imageAnalysis"
+            value="gemini"
+            (click)="setConfig('imageAnalysis', 'gemini')"
+            [checked]="gameSettings.imageAnalysis === 'gemini' || !gameSettings.imageAnalysis"
+          />
+          <label for="analysis-gemini" class="option-label">Gemini 2.5 Flash</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="analysis-gemma"
+            name="imageAnalysis"
+            value="gemma-mediapipe"
+            (click)="setConfig('imageAnalysis', 'gemma-mediapipe')"
+            [checked]="gameSettings.imageAnalysis === 'gemma-mediapipe'"
+          />
+          <label for="analysis-gemma" class="option-label">Gemma 4 (MediaPipe)</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="analysis-chrome"
+            name="imageAnalysis"
+            value="chrome-llm"
+            (click)="setConfig('imageAnalysis', 'chrome-llm')"
+            [checked]="gameSettings.imageAnalysis === 'chrome-llm'"
+          />
+          <label for="analysis-chrome" class="option-label">Chrome Built-in Model</label>
+        </div>
       </div>
     </div>
 

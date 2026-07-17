@@ -38,6 +38,7 @@ import {
   generateVideoAndFrames,
 } from "./helpers/veo-generation";
 import { generateImageWithImagen } from "./helpers/imagen-generation";
+import { generateImageWithGemmaCGA } from "./helpers/gemma-cga-generation";
 import { config } from "./helpers/ai-config-helper";
 
 const { port } = getServerConfig();
@@ -133,6 +134,30 @@ app.post("/analyseImage", async (req: Request, res: Response) => {
   } catch (error) {
     console.log("Error in analyseImage", error);
     res.status(500).json({ error: error instanceof Error ? error.message : "Error in analyseImage" });
+  }
+});
+
+// Route for Gemma 4 via MediaPipe image analysis
+app.post("/analyseImageGemma", async (req: Request, res: Response) => {
+  try {
+    const imageData = req.body.prompt || null;
+    if (!imageData) {
+      res.status(400).json({ error: "No image data provided" });
+      return;
+    }
+
+    const trimmedData = imageData.startsWith("data:image/") ? imageData.slice(22) : imageData;
+    console.log("[Gemma 4 MediaPipe] Performing MediaPipe analysis on drawing...");
+    const response = await imageToConfig(trimmedData);
+
+    if (response.type && config.isInappropriateContent(response.type)) {
+      return res.json(config.getSafetySettingsResponse());
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.log("Error in analyseImageGemma", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in analyseImageGemma" });
   }
 });
 
@@ -286,6 +311,12 @@ app.post("/generateImage", async (req: Request, res: Response) => {
     } else if (backend === "imagen") {
       await generateImageWithImagen(
         "imagen_generation",
+        objectType,
+        visualStylePrompt,
+        filepath
+      );
+    } else if (backend === "gemma-cga") {
+      await generateImageWithGemmaCGA(
         objectType,
         visualStylePrompt,
         filepath

@@ -133,6 +133,7 @@ export class AppComponent implements AfterViewInit {
   currentScene: string = 'IOPuzzle_Fire';
   gameSettings: any = {
     imageGenerator: 'imagen',
+    imageAnalysis: 'gemini',
     visualStyle: 'realistic',
   };
 

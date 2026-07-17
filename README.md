@@ -11,22 +11,7 @@ intended for use in a production environment.*
 
 ## Try it out today
 
-We recommend trying out this project in Firebase Studio. Click this button to launch the project in Firebase Studio and follow the steps below to get started.
-
-<a href="https://studio.firebase.google.com/import?url=https%3A%2F%2Fgithub.com%2FFirebaseExtended%2Fsolution-living-canvas">
-  <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="https://cdn.firebasestudio.dev/btn/try_dark_32.svg">
-    <source
-      media="(prefers-color-scheme: light)"
-      srcset="https://cdn.firebasestudio.dev/btn/try_light_32.svg">
-    <img
-      height="32"
-      alt="Try in Firebase Studio"
-      src="https://cdn.firebasestudio.dev/btn/try_blue_32.svg">
-  </picture>
-</a>
+We recommend trying out this project in Antigravity. Open this repository in Antigravity to get started.
 
 ### Prerequisites
 
@@ -57,79 +42,16 @@ npm install
 npm run dev
 ```
 
-## Running in Firebase Studio
+## Running in Antigravity
 
-1. Open the project in Firebase Studio.
-1. When prompted, log in with your account.
-1. Add your Google Cloud Project details (project ID, region and API key) to the file `.idx/dev.nix`.
-    * Follow the steps under [Prerequisites](#prerequisites) to set up your Google Cloud project.
-1. Rebuild the environment when prompted.
-1. The app is now ready! Switch to the **Web Preview** to see it in action.
-
-<!-- 
-### Getting started in Firebase Studio
-
-1. Open the project in Firebase Studio.
-1. When prompted, select your Firebase project.
-1. Log into Firebase Hosting. Navigate to the "Firebase Studio" screen and select "Authenticate". Follow the prompts in the terminal.
-1. Prepare your Firebase project by setting up security rules, TTL configuration and functions for cleaning up data:
-   1. Select a Firebase project: `firebase use`.
-   2. Deploy Firestore, Storage and Functions: `firebase deploy --only firestore,storage,functions`
-   3. Follow any additional prompts to set up access and grant permissions.
-   4. You may need to grant the *Logs Writer* permission.
-1. Configure Firebase for the Angular frontend app.
-   1. Navigate to the Firebase console, create a new web client and donwload the configuration file for your project.
-   1. Add the configuration into the file `client/web/angular-customer-app/src/environments/environment.development.ts`.
-1. The app is now ready! Switch to the **Web Preview** to see it in action.
-
-### Getting started locally
-
-You can run the application locally and access Firebase and Google Cloud directly.
-
-#### Local Prerequisites
-
-1. Set up the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install-sdk).
-1. Set up the [Firebase CLI](https://firebase.google.com/docs/cli).
-1. Set up [Application Default Credentials (ADC) for a local development environment](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment)
-
-Follow the steps in [services/cloud-run](services/cloud-run), [client/web/angular-customer-app](client/web/angular-customer-app) and [services/local-recommendation](services/local-recommendation) to run each component.
-
-## Demo and code overview
-
-This project consists of two main parts:
-
-* [client/web/angular-customer-app](client/web/angular-customer-app/): The frontend customer ordering app, built with Angular.
-* [services/cloud-run/](services/cloud-run/): The backend, built with Genkit, Vertex AI, Firestore, Clound Run and Cloud Storage for Firebase.
-
-Two additional systems provide some additional services:
-
-* [services/functions](services/functions/): Cloud Functions for Firebase to handle clean up of data stored in Cloud Storage.
-* [services/local-recommendation](services/local-recommendation/): A simple HTTP-service that returns a drink recommendation from a fixed list of beverages.
-
-## Demo walkthrough and examples
-
-Once the application is up and running, talk to the agent to assemble and submit a beverage order.
-
-Here are some example messages to try.
-
-### Orders
-
-```text
-I want to order a latte with oat milk and double shots.
-Add 1 latte, regular milk, 1 shot, no sweeteners to the order.
-Order a cappucino with almond milk and extra sugar.
-I'd like a decaf almond cappuccino, double shots with chocolate sauce.
-Add a cortado with with quadruple shots, iced, regular milk and a Matcha Latte with extra foam, hazelnut sauce and sugar free vanilla sweetener.
-Order 1 latte with oat milk, 2 shots and a latte, regular milk, 1 shot with sugar.
-``` 
-
--->
+1. Open the project in Antigravity.
+2. Follow the steps under [Prerequisites](#prerequisites) to set up your Google Cloud project and API keys in your environment variables.
+3. Start the client and server development servers.
+4. The app is now ready!
 
 ## Deploying the app
 
-You can deploy the backend and the frontend directly from Firebase Studio. Follow the on the "Firebase Studio" screen to deploy the app to Firebase App Hosting.
-
-Create an apphosting.yaml file and configure it based on the example.apphosting.yaml file in the root of the project.
+You can deploy the backend and frontend to Firebase App Hosting using the Firebase CLI:
 
 `firebase apphosting:backends:create --project PROJECT_ID --location us-central1`
 

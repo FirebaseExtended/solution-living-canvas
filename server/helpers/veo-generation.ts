@@ -25,6 +25,7 @@ import util from "util";
 import { applyRoundedCornersAndBorder, resizeImage } from "./image-processing";
 import { generateImageBuffer } from "./imagen-generation";
 import { generateImageWithGemini } from "./gemini-generation";
+import { generateGemmaAnimFrames, generateGemmaDiffAnimFrames } from "./gemma-cga-generation";
 import ffmpeg from "ffmpeg-static";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
@@ -133,7 +134,8 @@ export async function generateVideoAndFrames(
     // Check for cached frames
     const cachedFramesResult = await cacheManager.getCachedFrames(
       objectType,
-      visualStyle
+      visualStyle,
+      backend
     );
     if (cachedFramesResult.success && cachedFramesResult.data) {
       console.log(
@@ -214,6 +216,12 @@ export async function generateVideoAndFrames(
 
     if (backend === "gemini-anim") {
       await generateGeminiAnimFrames(hash, filepath, objectType, visualStyle);
+      return;
+    } else if (backend === "gemma-anim") {
+      await generateGemmaAnimFrames(hash, filepath, objectType, visualStyle);
+      return;
+    } else if (backend === "gemma-diff-anim") {
+      await generateGemmaDiffAnimFrames(hash, filepath, objectType, visualStyle);
       return;
     }
 
@@ -371,7 +379,8 @@ export async function generateVideoAndFrames(
       const framesCacheResult = await cacheManager.cacheFrames(
         objectType,
         visualStyle,
-        frames
+        frames,
+        backend
       );
       if (!framesCacheResult.success) {
         console.warn("Failed to cache frames:", framesCacheResult.error);
@@ -414,7 +423,8 @@ async function extractFrames(
   // Check cache first for all frames
   const cachedFramesResult = await cacheManager.getCachedFrames(
     objectType,
-    visualStyle
+    visualStyle,
+    "veo"
   );
   if (cachedFramesResult.success && cachedFramesResult.data) {
     console.log(
@@ -625,7 +635,7 @@ async function generateGeminiAnimFrames(
   ];
 
   // Cache ping-pong frames
-  await cacheManager.cacheFrames(objectType, visualStyle, pingPongFramesData);
+  await cacheManager.cacheFrames(objectType, visualStyle, pingPongFramesData, "gemini-anim");
 
   // Create MP4 video from processed frames using ffmpeg (frames 0..5)
   console.log(`Creating MP4 ping-pong video for Gemini animation...`);

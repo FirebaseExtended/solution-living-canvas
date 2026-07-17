@@ -51,14 +51,16 @@ const getCachePath = (cacheDir: string, cacheKey: string): string => {
 const getFramesCachePath = (
 	framesCacheDir: string,
 	objectType: string,
-	visualStyle: string
+	visualStyle: string,
+	backend: string = "veo"
 ): string => {
 	// Convert to lowercase for consistent naming
 	const normalizedObjectType = objectType.toLowerCase();
 	const normalizedVisualStyle = visualStyle.toLowerCase();
+	const normalizedBackend = backend.toLowerCase();
 	return path.join(
 		framesCacheDir,
-		`${normalizedObjectType}_${normalizedVisualStyle}`
+		`${normalizedObjectType}_${normalizedVisualStyle}_${normalizedBackend}`
 	);
 };
 
@@ -228,7 +230,8 @@ export const cacheManager = {
 
 	async getCachedFrames(
 		objectType: string,
-		visualStyle: string
+		visualStyle: string,
+		backend: string = "veo"
 	): Promise<CacheResult> {
 		if (!this.config.enabled) {
 			return { success: false, error: "Cache is disabled" };
@@ -238,7 +241,8 @@ export const cacheManager = {
 			const framesDir = getFramesCachePath(
 				this.paths.framesCacheDir,
 				objectType,
-				visualStyle
+				visualStyle,
+				backend
 			);
 			if (!fs.existsSync(framesDir)) {
 				return { success: false, error: "No cached frames found" };
@@ -263,7 +267,8 @@ export const cacheManager = {
 	async cacheFrames(
 		objectType: string,
 		visualStyle: string,
-		frames: string[]
+		frames: string[],
+		backend: string = "veo"
 	): Promise<CacheResult> {
 		if (!this.config.enabled) {
 			return { success: false, error: "Cache is disabled" };
@@ -273,7 +278,8 @@ export const cacheManager = {
 			const framesDir = getFramesCachePath(
 				this.paths.framesCacheDir,
 				objectType,
-				visualStyle
+				visualStyle,
+				backend
 			);
 			if (!fs.existsSync(framesDir)) {
 				fs.mkdirSync(framesDir, { recursive: true });

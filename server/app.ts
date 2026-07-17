@@ -38,7 +38,7 @@ import {
   generateVideoAndFrames,
 } from "./helpers/veo-generation";
 import { generateImageWithImagen } from "./helpers/imagen-generation";
-import { generateImageWithGemmaCGA } from "./helpers/gemma-cga-generation";
+import { generateImageWithGemmaCGA, generateImageWithGemmaDiffusion } from "./helpers/gemma-cga-generation";
 import { config } from "./helpers/ai-config-helper";
 
 const { port } = getServerConfig();
@@ -258,7 +258,7 @@ app.post("/generateImage", async (req: Request, res: Response) => {
       console.error("Error cleaning up existing files:", cleanupError);
     }
     
-    if (backend === "veo" || backend === "omni" || backend === "gemini-anim") {
+    if (backend === "veo" || backend === "omni" || backend === "gemini-anim" || backend === "gemma-anim" || backend === "gemma-diff-anim") {
       try {
         const filenameOriginal = `output_${hash}_original.png`;
         const filepathOriginal = join("generated", filenameOriginal);
@@ -317,6 +317,12 @@ app.post("/generateImage", async (req: Request, res: Response) => {
       );
     } else if (backend === "gemma-cga") {
       await generateImageWithGemmaCGA(
+        objectType,
+        visualStylePrompt,
+        filepath
+      );
+    } else if (backend === "gemma-diffusion") {
+      await generateImageWithGemmaDiffusion(
         objectType,
         visualStylePrompt,
         filepath

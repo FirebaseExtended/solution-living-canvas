@@ -306,6 +306,9 @@ export class AppComponent implements AfterViewInit {
         'omni': 'Omni (Veo 3.1)',
         'gemini-anim': 'Gemini 3.1 Animation (4-Frame)',
         'gemma-cga': 'Gemma CGA Pixel Art (MediaPipe)',
+        'gemma-anim': 'Gemma Animation (4-Frame)',
+        'gemma-diffusion': 'DiffusionGemma (MediaPipe)',
+        'gemma-diff-anim': 'DiffusionGemma Animation (4-Frame)',
       };
       return labels[val] || 'Select Model';
     } else if (category === 'imageAnalysis') {

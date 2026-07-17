@@ -16,6 +16,7 @@
 
 import { GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import fs from "fs";
+import sharp from "sharp";
 import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
@@ -199,14 +200,18 @@ export async function generateImageWithGemini(
       throw new Error("Invalid response format from Gemini API");
     }
 
-    const generatedImageData =
+    const rawImageData =
       response.candidates[0].content.parts[0].inlineData.data;
 
-    // ...
-    // [END image_generation]
+    // Force 1:1 square aspect ratio (512x512)
+    const rawBuffer = Buffer.from(rawImageData, "base64");
+    const squareBuffer = await sharp(rawBuffer)
+      .resize(512, 512, { fit: "cover" })
+      .toBuffer();
+    const generatedImageData = squareBuffer.toString("base64");
 
     // Save to file
-    fs.writeFileSync(filepath, generatedImageData, "base64");
+    fs.writeFileSync(filepath, squareBuffer);
 
     if (!fs.existsSync(filepath)) {
       throw new Error("Failed to save generated image");

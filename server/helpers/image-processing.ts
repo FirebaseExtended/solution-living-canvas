@@ -78,25 +78,25 @@ export async function applyRoundedCornersAndBorder(
       throw new Error(`Output directory not found: ${outputDir}`);
     }
 
-    const image = sharp(inputPath);
+    const cornerRadius = 16;
+    const borderWidth = 4; // Uniform border width around all sides
+    const borderColor = "black"; // Border color
 
     const innerWidth = 128;
     const innerHeight = 128;
 
-    // Calculate resized dimensions (including border)
-    const resizedWidth = innerWidth + 4 * borderWidth;
-    const resizedHeight = innerHeight + 4 * borderWidth;
+    // Calculate total dimensions (including border on all sides)
+    const totalWidth = innerWidth + 2 * borderWidth;
+    const totalHeight = innerHeight + 2 * borderWidth;
 
-    // Create a rounded corner mask (larger to accommodate border)
+    // Create a rounded corner mask for the inner image
     const mask = Buffer.from(
-      `<svg><rect x="0" y="0" width="${innerWidth}" height="${innerHeight}" rx="${
-        cornerRadius + borderWidth
-      }" ry="${cornerRadius + borderWidth}"/></svg>`
+      `<svg width="${innerWidth}" height="${innerHeight}"><rect x="0" y="0" width="${innerWidth}" height="${innerHeight}" rx="${cornerRadius}" ry="${cornerRadius}"/></svg>`
     );
 
     // Create a background with the border color
     const background = Buffer.from(
-      `<svg><rect x="0" y="0" width="${resizedWidth}" height="${resizedHeight}" fill="${borderColor}" rx="${
+      `<svg width="${totalWidth}" height="${totalHeight}"><rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="${borderColor}" rx="${
         cornerRadius + borderWidth
       }" ry="${cornerRadius + borderWidth}"/></svg>`
     );
@@ -116,8 +116,8 @@ export async function applyRoundedCornersAndBorder(
         {
           input: roundedInnerImageBuffer,
           blend: "over",
-          left: Math.round(borderWidth / 4 - 1),
-          top: Math.round(borderWidth / 4 - 1),
+          left: borderWidth,
+          top: borderWidth,
         },
         {
           input: background,

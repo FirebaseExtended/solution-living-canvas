@@ -84,13 +84,6 @@ export async function generateStaticImage(
     const resizedBuffer = fs.readFileSync(filepathSmall);
     const resizedBase64 = resizedBuffer.toString("base64");
 
-    // Start video generation in the background
-    generateVideoAndFrames(hash, filepath, objectType, visualStyle).catch(
-      (error) => {
-        console.error("Error in background video generation:", error);
-      }
-    );
-
     return { hash, processedImage: resizedBase64, filepathOriginal };
   } catch (error) {
     console.error("Error in generateStaticImage:", error);
@@ -610,11 +603,32 @@ async function generateGeminiAnimFrames(
     framesData.push(fs.readFileSync(currentFramePath).toString("base64"));
   }
 
-  // Cache frames
-  await cacheManager.cacheFrames(objectType, visualStyle, framesData);
+  // Ping-pong loop sequence: 0 -> 1 -> 2 -> 3 -> 2 -> 1
+  const frame4Path = path.join(generatedDir, `output_${hash}_frame4.png`);
+  const frame5Path = path.join(generatedDir, `output_${hash}_frame5.png`);
+  fs.copyFileSync(
+    path.join(generatedDir, `output_${hash}_frame2.png`),
+    frame4Path
+  );
+  fs.copyFileSync(
+    path.join(generatedDir, `output_${hash}_frame1.png`),
+    frame5Path
+  );
 
-  // Create MP4 video from processed frames using ffmpeg
-  console.log(`Creating MP4 video for Gemini animation...`);
+  const pingPongFramesData = [
+    framesData[0],
+    framesData[1],
+    framesData[2],
+    framesData[3],
+    framesData[2],
+    framesData[1],
+  ];
+
+  // Cache ping-pong frames
+  await cacheManager.cacheFrames(objectType, visualStyle, pingPongFramesData);
+
+  // Create MP4 video from processed frames using ffmpeg (frames 0..5)
+  console.log(`Creating MP4 ping-pong video for Gemini animation...`);
   const videoPath = path.join(generatedDir, `output_${hash}.mp4`);
   const framePattern = path.join(generatedDir, `output_${hash}_frame%d.png`);
   await new Promise<void>((resolve, reject) => {

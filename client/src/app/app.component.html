@@ -179,6 +179,17 @@
           />
           <label for="veo" class="option-label">Veo</label>
         </div>
+        <div>
+          <input
+            type="radio"
+            id="omni"
+            name="imageGenerator"
+            value="omni"
+            (click)="setConfig('imageGenerator', 'omni')"
+            [checked]="gameSettings.imageGenerator === 'omni'"
+          />
+          <label for="omni" class="option-label">Omni</label>
+        </div>
       </div>
     </div>
 

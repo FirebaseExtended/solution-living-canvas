@@ -3,7 +3,7 @@ import path from "path";
 import { config } from "./ai-config-helper";
 import { generateImageBuffer } from "./imagen-generation";
 
-export type GenerationType = "imagen" | "gemini" | "veo";
+export type GenerationType = "imagen" | "gemini" | "veo" | "omni";
 
 interface CacheConfig {
 	enabled: boolean;
@@ -136,7 +136,7 @@ export const cacheManager = {
 			if (availableVariations.length === this.config.poolSize) {
 				// For VEO generation, always use the first variation (variation 0)
 				let selectedVariation: number;
-				if (generationType === "veo") {
+				if (generationType === "veo" || generationType === "omni") {
 					selectedVariation = 0;
 				} else {
 					// Randomly select from available variations

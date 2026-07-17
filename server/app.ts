@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+import buffer from "buffer";
+if (!buffer.SlowBuffer) {
+  (buffer as any).SlowBuffer = class SlowBuffer extends Buffer {};
+}
+
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import { join } from "path";
@@ -228,7 +233,7 @@ app.post("/generateImage", async (req: Request, res: Response) => {
       console.error("Error cleaning up existing files:", cleanupError);
     }
     
-    if (backend === "veo") {
+    if (backend === "veo" || backend === "omni") {
       try {
         const filenameOriginal = `output_${hash}_original.png`;
         const filepathOriginal = join("generated", filenameOriginal);
@@ -244,7 +249,13 @@ app.post("/generateImage", async (req: Request, res: Response) => {
         res.json({ hash, processedImage });
 
         // Start video generation in background
-        generateVideoAndFrames(hash, filepathOriginal).catch((err) => {
+        generateVideoAndFrames(
+          hash,
+          filepathOriginal,
+          objectType,
+          visualStylePrompt,
+          backend
+        ).catch((err) => {
           console.error("Error with video/frames generation:", err);
           // Create error file for frontend
           const errorFile = join("generated", `error_${hash}.json`);
@@ -262,7 +273,7 @@ app.post("/generateImage", async (req: Request, res: Response) => {
         return;
       } catch (error) {
         throw new Error(
-          `Veo image generation failed: ${
+          `${backend} image generation failed: ${
             error instanceof Error ? error.message : "Unknown error"
           }`
         );

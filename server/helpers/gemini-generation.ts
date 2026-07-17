@@ -138,25 +138,32 @@ export async function generateImageWithGemini(
   filepath: string
 ): Promise<string> {
   try {
-    // Check cache first
-    const cachedResult = await cacheManager.getCachedImage(
-      objectType,
-      visualStyle,
-      "gemini"
-    );
-    if (
-      cachedResult.success &&
-      cachedResult.data &&
-      typeof cachedResult.data === "string"
-    ) {
-      console.log(
-        `Using cached image for ${objectType} in ${visualStyle} style`
+    if (inputImageData && inputImageData.startsWith("data:image/png;base64,")) {
+      inputImageData = inputImageData.slice(22);
+    }
+    const hasInputImage = Boolean(inputImageData && inputImageData.trim().length > 0);
+
+    // Check cache first only if no user input image was provided
+    if (!hasInputImage) {
+      const cachedResult = await cacheManager.getCachedImage(
+        objectType,
+        visualStyle,
+        "gemini"
       );
-      fs.writeFileSync(filepath, Buffer.from(cachedResult.data, "base64"));
-      return filepath;
+      if (
+        cachedResult.success &&
+        cachedResult.data &&
+        typeof cachedResult.data === "string"
+      ) {
+        console.log(
+          `Using cached image for ${objectType} in ${visualStyle} style`
+        );
+        fs.writeFileSync(filepath, Buffer.from(cachedResult.data, "base64"));
+        return filepath;
+      }
     }
 
-    // If no cache hit, proceed with generation
+    // If no cache hit or input image provided, proceed with generation
     const model = aiConfig.models["generation_gemini"];
     if (!model) {
       throw new Error("Gemini model configuration not found");
@@ -171,10 +178,6 @@ export async function generateImageWithGemini(
       model: model,
       config: generationConfig as GenerateContentConfig,
     });
-
-    if (inputImageData.startsWith("data:image/png;base64,")) {
-      inputImageData = inputImageData.slice(22);
-    }
 
     const response = await sendGeminiMessage(
       vertexChat,
@@ -229,18 +232,18 @@ async function sendGeminiMessage(
   inputImageData: string
 ): Promise<GeminiResponse> {
   try {
+    const messageParts: any[] = [{ text: textData }];
+    if (inputImageData && inputImageData.trim().length > 0) {
+      messageParts.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: inputImageData,
+        },
+      });
+    }
+
     const response = await vertexChat.sendMessage({
-      message: [
-        {
-          text: textData,
-        },
-        {
-          inlineData: {
-            mimeType: "image/png",
-            data: inputImageData,
-          },
-        },
-      ],
+      message: messageParts,
     });
 
     if (!response) {

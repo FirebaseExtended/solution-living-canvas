@@ -102,7 +102,8 @@ export async function generateVideoAndFrames(
   hash: string,
   filepath: string,
   objectType?: string,
-  visualStyle?: string
+  visualStyle?: string,
+  backend: string = "veo"
 ): Promise<void> {
   try {
     // If objectType and visualStyle are not provided, try to extract from filepath
@@ -219,16 +220,9 @@ export async function generateVideoAndFrames(
 
     // [START video_generation]
     
-    // "veo_generation": "veo-2.0-generate-001"
-    const modelId = aiConfig.models["veo_generation"];
-
-    // "veo_generation": "Show the subject gently moving or
-    // floating in place, always fully visible and centered,
-    // with no zoom, no cropping, and no added borders. The
-    // background should remain clean and consistent.
-    // The animation should be subtle and natural, preserving
-    // the original composition of the image."
-    const prompt = aiConfig.prompts["veo_generation"];
+    const modelKey = backend === "omni" ? "omni_generation" : "veo_generation";
+    const modelId = aiConfig.models[modelKey] || (backend === "omni" ? "omni-2.0-generate-001" : "veo-2.0-generate-001");
+    const prompt = aiConfig.prompts[modelKey] || aiConfig.prompts["veo_generation"];
     const imageBuffer = fs.readFileSync(filepath);
 
     // Pad to 9:16 aspect ratio (e.g., 1080x1920)

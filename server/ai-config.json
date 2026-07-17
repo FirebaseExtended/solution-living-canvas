@@ -1,9 +1,10 @@
 {
   "models": {
-    "analysis_gemini": "gemini-2.0-flash",
+    "analysis_gemini": "gemini-2.5-flash",
     "generation_gemini": "gemini-2.0-flash-preview-image-generation",
     "generation_imagen": "imagen-3.0-fast-generate-001",
-    "veo_generation": "veo-2.0-generate-001"
+    "veo_generation": "veo-2.0-generate-001",
+    "omni_generation": "omni-2.0-generate-001"
   },
   "prompts": {
     "analysis_initialGuess": "If this image contains a drawing, which of these options are the best way to describe this image? If the image contains written text, what does the text say? Or say 'none' if the image does not match any of the types. {{types}}",
@@ -30,7 +31,8 @@
 
     "analysis_textToCommand": "You are a JSON parser. Your task is to extract a verb and target from the given text and return them in a specific JSON format. The response MUST be a valid JSON object with EXACTLY TWO fields: 'verb' and 'target'. BOTH fields are REQUIRED. The verb MUST be one of these exact values: {{verbs}} The target MUST be one of these exact values: {{targets}} IMPORTANT: The target MUST be an object that can be acted upon (like 'key', 'metal', etc.) and NOT an attribute or property. For example, if the text is 'set the key on fire', you MUST return exactly this JSON: { \"verb\": \"setFire\", \"target\": \"key\" } Do not include any other text, markdown, or formatting - just the JSON object. The response MUST be parseable by JSON.parse() and MUST contain BOTH verb and target fields. The target field MUST be present and MUST be one of the provided target values.\nHere is the text to analyze: {{text}}",
     
-    "veo_generation": "Show the subject gently moving or floating in place, always fully visible and centered, with no zoom, no cropping, and no added borders. The background should remain clean and consistent. The animation should be subtle and natural, preserving the original composition of the image."
+    "veo_generation": "Show the subject gently moving or floating in place, always fully visible and centered, with no zoom, no cropping, and no added borders. The background should remain clean and consistent. The animation should be subtle and natural, preserving the original composition of the image.",
+    "omni_generation": "Show the subject gently moving or floating in place, always fully visible and centered, with no zoom, no cropping, and no added borders. The background should remain clean and consistent. The animation should be subtle and natural, preserving the original composition of the image."
   },
   "cache": {
     "enabled": true,

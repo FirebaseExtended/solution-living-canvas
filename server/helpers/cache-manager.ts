@@ -3,298 +3,323 @@ import path from "path";
 import { config } from "./ai-config-helper";
 import { generateImageBuffer } from "./imagen-generation";
 
-export type GenerationType = "imagen" | "gemini" | "veo" | "omni";
+export type GenerationType =
+  | "imagen"
+  | "gemini"
+  | "veo"
+  | "omni"
+  | "gemini-anim"
+  | "gemma-cga"
+  | "gemma-anim"
+  | "gemma-diffusion"
+  | "gemma-diff-anim"
+  | string;
 
 interface CacheConfig {
-	enabled: boolean;
-	poolSize: number;
+  enabled: boolean;
+  poolSize: number;
 }
 
 interface CachePaths {
-	cacheDir: string;
-	framesCacheDir: string;
+  cacheDir: string;
 }
 
 interface CacheResult {
-	success: boolean;
-	data?: string | string[];
-	error?: string;
+  success: boolean;
+  data?: string | string[];
+  error?: string;
 }
 
 const initializeCache = (paths: CachePaths): void => {
-	const { cacheDir, framesCacheDir } = paths;
-	const directories = [cacheDir, framesCacheDir];
-
-	for (const dir of directories) {
-		if (!fs.existsSync(dir)) {
-			fs.mkdirSync(dir, { recursive: true });
-		}
-	}
+  if (!fs.existsSync(paths.cacheDir)) {
+    fs.mkdirSync(paths.cacheDir, { recursive: true });
+  }
 };
 
-const getCacheKey = (
-	objectType: string,
-	visualStyle: string,
-	variation: number,
-	generationType: GenerationType
+const getModelDir = (cacheDir: string, backend: string): string => {
+  const normalizedBackend = (backend || "imagen").toLowerCase();
+  const dir = path.join(cacheDir, normalizedBackend);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+};
+
+const getImageCachePath = (
+  cacheDir: string,
+  backend: string,
+  objectType: string,
+  visualStyle: string,
+  variation: number
 ): string => {
-	// Convert objectType and visualStyle to lowercase for consistent naming
-	const normalizedObjectType = objectType.toLowerCase();
-	const normalizedVisualStyle = visualStyle.toLowerCase();
-	return `${generationType}_${normalizedObjectType}_${normalizedVisualStyle}_${variation}`;
+  const modelDir = getModelDir(cacheDir, backend);
+  const normalizedObject = objectType.toLowerCase();
+  const normalizedStyle = visualStyle.toLowerCase();
+  const filename = normalizedStyle
+    ? `${normalizedObject}_${normalizedStyle}-${variation}.png`
+    : `${normalizedObject}-${variation}.png`;
+  return path.join(modelDir, filename);
 };
 
-const getCachePath = (cacheDir: string, cacheKey: string): string => {
-	return path.join(cacheDir, `${cacheKey}.png`);
-};
-
-const getFramesCachePath = (
-	framesCacheDir: string,
-	objectType: string,
-	visualStyle: string,
-	backend: string = "veo"
+const getFrameCachePath = (
+  cacheDir: string,
+  backend: string,
+  objectType: string,
+  visualStyle: string,
+  frameIndex: number
 ): string => {
-	// Convert to lowercase for consistent naming
-	const normalizedObjectType = objectType.toLowerCase();
-	const normalizedVisualStyle = visualStyle.toLowerCase();
-	const normalizedBackend = backend.toLowerCase();
-	return path.join(
-		framesCacheDir,
-		`${normalizedObjectType}_${normalizedVisualStyle}_${normalizedBackend}`
-	);
+  const modelDir = getModelDir(cacheDir, backend);
+  const normalizedObject = objectType.toLowerCase();
+  const normalizedStyle = visualStyle.toLowerCase();
+  const filename = normalizedStyle
+    ? `${normalizedObject}_${normalizedStyle}-frame${frameIndex}.png`
+    : `${normalizedObject}-frame${frameIndex}.png`;
+  return path.join(modelDir, filename);
 };
 
 export const cacheManager = {
-	config: config.getCacheConfig() as CacheConfig,
-	paths: {
-		cacheDir: path.join(process.cwd(), "generated", "cache"),
-		framesCacheDir: path.join(process.cwd(), "generated", "cache", "frames"),
-	},
+  config: config.getCacheConfig() as CacheConfig,
+  paths: {
+    cacheDir: path.join(process.cwd(), "generated", "cache"),
+  },
 
-	initialize(): void {
-		if (!this.config.enabled) return;
-		initializeCache(this.paths);
-	},
+  initialize(): void {
+    if (!this.config.enabled) return;
+    initializeCache(this.paths);
+  },
 
-	async preloadCache(objectType: string, visualStyle: string): Promise<void> {
-		// Silently return if cache is disabled
-		if (!this.config.enabled) return;
+  async preloadCache(objectType: string, visualStyle: string): Promise<void> {
+    if (!this.config.enabled) return;
 
-		try {
-			// Check if we already have a full pool
-			const availableVariations: number[] = [];
-			for (let i = 0; i < this.config.poolSize; i++) {
-				const cacheKey = getCacheKey(objectType, visualStyle, i, "imagen");
-				const cachePath = getCachePath(this.paths.cacheDir, cacheKey);
-				if (fs.existsSync(cachePath)) {
-					availableVariations.push(i);
-				}
-			}
+    try {
+      const availableVariations: number[] = [];
+      for (let i = 0; i < this.config.poolSize; i++) {
+        const cachePath = getImageCachePath(
+          this.paths.cacheDir,
+          "imagen",
+          objectType,
+          visualStyle,
+          i
+        );
+        if (fs.existsSync(cachePath)) {
+          availableVariations.push(i);
+        }
+      }
 
-			// If we already have a full pool, no need to preload
-			if (availableVariations.length === this.config.poolSize) {
-				return;
-			}
+      if (availableVariations.length === this.config.poolSize) {
+        return;
+      }
 
-			// Generate images until we have a full pool
-			for (let i = availableVariations.length; i < this.config.poolSize; i++) {
-				try {
-					const base64Image = await generateImageBuffer(objectType, visualStyle);
-					await this.cacheImage(objectType, visualStyle, base64Image);
-				} catch (error) {
-					// Log error but continue trying to preload
-					console.error(`Failed to preload variation ${i} for ${objectType} in ${visualStyle} style:`, error);
-				}
-			}
-		} catch (error) {
-			// Log error but don't throw
-			console.error(`Error in preloadCache for ${objectType} in ${visualStyle} style:`, error);
-		}
-	},
+      for (let i = availableVariations.length; i < this.config.poolSize; i++) {
+        try {
+          const base64Image = await generateImageBuffer(objectType, visualStyle);
+          await this.cacheImage(objectType, visualStyle, base64Image, "imagen");
+        } catch (error) {
+          console.error(
+            `Failed to preload variation ${i} for ${objectType} in ${visualStyle} style:`,
+            error
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        `Error in preloadCache for ${objectType} in ${visualStyle} style:`,
+        error
+      );
+    }
+  },
 
-	async getCachedImage(
-		objectType: string,
-		visualStyle: string,
-		generationType: GenerationType = "imagen"
-	): Promise<CacheResult> {
-		if (!this.config.enabled) {
-			return { success: false, error: "Cache is disabled" };
-		}
+  async getCachedImage(
+    objectType: string,
+    visualStyle: string,
+    generationType: GenerationType = "imagen"
+  ): Promise<CacheResult> {
+    if (!this.config.enabled) {
+      return { success: false, error: "Cache is disabled" };
+    }
 
-		try {
-			// Get all available variations for this object and style
-			const availableVariations: number[] = [];
-			for (let i = 0; i < this.config.poolSize; i++) {
-				const cacheKey = getCacheKey(objectType, visualStyle, i, generationType);
-				const cachePath = getCachePath(this.paths.cacheDir, cacheKey);
-				if (fs.existsSync(cachePath)) {
-					availableVariations.push(i);
-				}
-			}
+    try {
+      const availableVariations: number[] = [];
+      for (let i = 0; i < this.config.poolSize; i++) {
+        const cachePath = getImageCachePath(
+          this.paths.cacheDir,
+          generationType,
+          objectType,
+          visualStyle,
+          i
+        );
+        if (fs.existsSync(cachePath)) {
+          availableVariations.push(i);
+        }
+      }
 
-			console.log(`Found ${availableVariations.length} variations for ${objectType} in ${visualStyle} style`);
+      console.log(
+        `Found ${availableVariations.length} variations for ${objectType} in ${visualStyle} style (model: ${generationType})`
+      );
 
-			// If we have a full pool, randomly select one
-			if (availableVariations.length === this.config.poolSize) {
-				// For VEO generation, always use the first variation (variation 0)
-				let selectedVariation: number;
-				if (generationType === "veo" || generationType === "omni") {
-					selectedVariation = 0;
-				} else {
-					// Randomly select from available variations
-					const randomIndex = Math.floor(Math.random() * availableVariations.length);
-					selectedVariation = availableVariations[randomIndex];
-				}
+      if (availableVariations.length === this.config.poolSize) {
+        let selectedVariation: number;
+        if (generationType === "veo" || generationType === "omni") {
+          selectedVariation = 0;
+        } else {
+          const randomIndex = Math.floor(
+            Math.random() * availableVariations.length
+          );
+          selectedVariation = availableVariations[randomIndex];
+        }
 
-				console.log(`Selected variation ${selectedVariation} from full pool of ${availableVariations.length} variations`);
+        console.log(
+          `Selected variation ${selectedVariation} from full pool of ${availableVariations.length} variations for ${generationType}`
+        );
 
-				const cacheKey = getCacheKey(
-					objectType,
-					visualStyle,
-					selectedVariation,
-					generationType
-				);
-				const cachePath = getCachePath(this.paths.cacheDir, cacheKey);
+        const cachePath = getImageCachePath(
+          this.paths.cacheDir,
+          generationType,
+          objectType,
+          visualStyle,
+          selectedVariation
+        );
 
-				const imageBuffer = fs.readFileSync(cachePath);
-				return { success: true, data: imageBuffer.toString("base64") };
-			}
+        const imageBuffer = fs.readFileSync(cachePath);
+        return { success: true, data: imageBuffer.toString("base64") };
+      }
 
-			// If we have some variations but not a full pool, return error to trigger generation
-			if (availableVariations.length > 0) {
-				console.log(`Incomplete pool (${availableVariations.length}/${this.config.poolSize}), triggering new generation`);
-			}
+      if (availableVariations.length > 0) {
+        console.log(
+          `Incomplete pool (${availableVariations.length}/${this.config.poolSize}) for ${generationType}, triggering new generation`
+        );
+      }
 
-			// If no variations found, return error to trigger generation
-			return { success: false, error: "No cached images found" };
-		} catch (error) {
-			return { success: false, error: `Error getting cached image: ${error}` };
-		}
-	},
+      return { success: false, error: "No cached images found" };
+    } catch (error) {
+      return { success: false, error: `Error getting cached image: ${error}` };
+    }
+  },
 
-	async cacheImage(
-		objectType: string,
-		visualStyle: string,
-		base64Image: string,
-		generationType: GenerationType = "imagen"
-	): Promise<CacheResult> {
-		if (!this.config.enabled) {
-			return { success: false, error: "Cache is disabled" };
-		}
+  async cacheImage(
+    objectType: string,
+    visualStyle: string,
+    base64Image: string,
+    generationType: GenerationType = "imagen"
+  ): Promise<CacheResult> {
+    if (!this.config.enabled) {
+      return { success: false, error: "Cache is disabled" };
+    }
 
-		try {
-			// Get all existing variations
-			const existingVariations: number[] = [];
-			for (let i = 0; i < this.config.poolSize; i++) {
-				const cacheKey = getCacheKey(objectType, visualStyle, i, generationType);
-				const cachePath = getCachePath(this.paths.cacheDir, cacheKey);
-				if (fs.existsSync(cachePath)) {
-					existingVariations.push(i);
-				}
-			}
+    try {
+      const existingVariations: number[] = [];
+      for (let i = 0; i < this.config.poolSize; i++) {
+        const cachePath = getImageCachePath(
+          this.paths.cacheDir,
+          generationType,
+          objectType,
+          visualStyle,
+          i
+        );
+        if (fs.existsSync(cachePath)) {
+          existingVariations.push(i);
+        }
+      }
 
-			console.log(`Found ${existingVariations.length} existing variations for ${objectType} in ${visualStyle} style`);
+      let variation = 0;
+      while (variation < this.config.poolSize) {
+        if (!existingVariations.includes(variation)) {
+          break;
+        }
+        variation++;
+      }
 
-			// Find the next available variation number
-			let variation = 0;
-			while (variation < this.config.poolSize) {
-				if (!existingVariations.includes(variation)) {
-					break;
-				}
-				variation++;
-			}
+      if (variation >= this.config.poolSize) {
+        variation = Math.floor(Math.random() * this.config.poolSize);
+        console.log(
+          `Pool is full for ${generationType}, randomly replacing variation ${variation}`
+        );
+      } else {
+        console.log(
+          `Adding new variation ${variation} for ${generationType} to the pool`
+        );
+      }
 
-			// If we've reached the pool size, randomly replace an existing image
-			if (variation >= this.config.poolSize) {
-				variation = Math.floor(Math.random() * this.config.poolSize);
-				console.log(`Pool is full, randomly replacing variation ${variation}`);
-			} else {
-				console.log(`Adding new variation ${variation} to the pool`);
-			}
+      const cachePath = getImageCachePath(
+        this.paths.cacheDir,
+        generationType,
+        objectType,
+        visualStyle,
+        variation
+      );
 
-			const cacheKey = getCacheKey(
-				objectType,
-				visualStyle,
-				variation,
-				generationType
-			);
-			const cachePath = getCachePath(this.paths.cacheDir, cacheKey);
+      fs.writeFileSync(cachePath, Buffer.from(base64Image, "base64"));
+      console.log(
+        `Cached image variation ${variation} for ${objectType} in ${visualStyle} style (model: ${generationType})`
+      );
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: `Error caching image: ${error}` };
+    }
+  },
 
-			fs.writeFileSync(cachePath, Buffer.from(base64Image, "base64"));
-			console.log(`Cached image ${variation} for ${objectType} in ${visualStyle} style`);
-			return { success: true };
-		} catch (error) {
-			return { success: false, error: `Error caching image: ${error}` };
-		}
-	},
+  async getCachedFrames(
+    objectType: string,
+    visualStyle: string,
+    backend: string = "veo"
+  ): Promise<CacheResult> {
+    if (!this.config.enabled) {
+      return { success: false, error: "Cache is disabled" };
+    }
 
-	async getCachedFrames(
-		objectType: string,
-		visualStyle: string,
-		backend: string = "veo"
-	): Promise<CacheResult> {
-		if (!this.config.enabled) {
-			return { success: false, error: "Cache is disabled" };
-		}
+    try {
+      const frames: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const framePath = getFrameCachePath(
+          this.paths.cacheDir,
+          backend,
+          objectType,
+          visualStyle,
+          i
+        );
+        if (!fs.existsSync(framePath)) {
+          return { success: false, error: `Missing frame ${i} for ${backend}` };
+        }
+        const frameBuffer = fs.readFileSync(framePath);
+        frames.push(frameBuffer.toString("base64"));
+      }
 
-		try {
-			const framesDir = getFramesCachePath(
-				this.paths.framesCacheDir,
-				objectType,
-				visualStyle,
-				backend
-			);
-			if (!fs.existsSync(framesDir)) {
-				return { success: false, error: "No cached frames found" };
-			}
+      return { success: true, data: frames };
+    } catch (error) {
+      return { success: false, error: `Error reading cached frames: ${error}` };
+    }
+  },
 
-			const frames: string[] = [];
-			for (let i = 0; i < 4; i++) {
-				const framePath = path.join(framesDir, `frame${i}.png`);
-				if (!fs.existsSync(framePath)) {
-					return { success: false, error: `Missing frame ${i}` };
-				}
-				const frameBuffer = fs.readFileSync(framePath);
-				frames.push(frameBuffer.toString("base64"));
-			}
+  async cacheFrames(
+    objectType: string,
+    visualStyle: string,
+    frames: string[],
+    backend: string = "veo"
+  ): Promise<CacheResult> {
+    if (!this.config.enabled) {
+      return { success: false, error: "Cache is disabled" };
+    }
 
-			return { success: true, data: frames };
-		} catch (error) {
-			return { success: false, error: `Error reading cached frames: ${error}` };
-		}
-	},
+    try {
+      for (let i = 0; i < frames.length; i++) {
+        const framePath = getFrameCachePath(
+          this.paths.cacheDir,
+          backend,
+          objectType,
+          visualStyle,
+          i
+        );
+        fs.writeFileSync(framePath, Buffer.from(frames[i], "base64"));
+      }
 
-	async cacheFrames(
-		objectType: string,
-		visualStyle: string,
-		frames: string[],
-		backend: string = "veo"
-	): Promise<CacheResult> {
-		if (!this.config.enabled) {
-			return { success: false, error: "Cache is disabled" };
-		}
-
-		try {
-			const framesDir = getFramesCachePath(
-				this.paths.framesCacheDir,
-				objectType,
-				visualStyle,
-				backend
-			);
-			if (!fs.existsSync(framesDir)) {
-				fs.mkdirSync(framesDir, { recursive: true });
-			}
-
-			for (let i = 0; i < frames.length; i++) {
-				const framePath = path.join(framesDir, `frame${i}.png`);
-				fs.writeFileSync(framePath, Buffer.from(frames[i], "base64"));
-			}
-
-			return { success: true };
-		} catch (error) {
-			return { success: false, error: `Error caching frames: ${error}` };
-		}
-	}
+      console.log(
+        `Cached ${frames.length} frames for ${objectType} in ${visualStyle} style (model: ${backend})`
+      );
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: `Error caching frames: ${error}` };
+    }
+  },
 };
 
 // Initialize cache on import

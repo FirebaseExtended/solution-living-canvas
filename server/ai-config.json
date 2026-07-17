@@ -1,10 +1,11 @@
 {
   "models": {
     "analysis_gemini": "gemini-2.5-flash",
-    "generation_gemini": "gemini-2.0-flash-preview-image-generation",
-    "generation_imagen": "imagen-3.0-fast-generate-001",
-    "veo_generation": "veo-2.0-generate-001",
-    "omni_generation": "omni-2.0-generate-001"
+    "generation_gemini": "gemini-3.1-flash-lite-image",
+    "generation_imagen": "imagen-4.0-fast-generate-001",
+    "veo_generation": "veo-3.1-fast-generate-preview",
+    "omni_generation": "veo-3.1-fast-generate-preview",
+    "gemini_anim_generation": "gemini-3.1-flash-lite-image"
   },
   "prompts": {
     "analysis_initialGuess": "If this image contains a drawing, which of these options are the best way to describe this image? If the image contains written text, what does the text say? Or say 'none' if the image does not match any of the types. {{types}}",
@@ -15,6 +16,7 @@
     "imagen_pregen_object": "Generate an image of a {{type}}, centered on a coloured background in a similar 2D side-on view with the following visual style: {{visualStyle}}.",
 
     "gemini_generation": "Generate an image of a {{type}}, centered on a coloured background in a similar 2D side-on view with the following visual style: {{visualStyle}}.",
+    "gemini_anim_frame": "Generate a new animation frame based on the previous image of a {{type}}. Show subtle movement, motion, or action while keeping the background consistent in a 2D side-on view with visual style: {{visualStyle}}.",
 
     "gemini_pregen_level": "Use the attached mask to generate a level. The mask is a black and white image where the white pixels are the areas that should be filled in. The level should be generated in a similar 2D side-on view with the following visual style: {{visualStyle}}.",
     "gemini_background": "Generate a {{visualStyle}} 2D game background of snowy mountains. Use the provided black mask as a guide for the foreground of icy cliffs and white for background of mountains and pine trees, while retaining the aspect ratio. The image should be 1284x750 pixels.",

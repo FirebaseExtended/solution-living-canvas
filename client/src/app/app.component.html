@@ -155,7 +155,7 @@
             (click)="setConfig('imageGenerator', 'gemini')"
             [checked]="gameSettings.imageGenerator === 'gemini'"
           />
-          <label for="gemini" class="option-label">Gemini 2.0 Flash</label>
+          <label for="gemini" class="option-label">Gemini 3.1 Flash-Lite</label>
         </div>
         <div>
           <input
@@ -166,7 +166,7 @@
             (click)="setConfig('imageGenerator', 'imagen')"
             [checked]="gameSettings.imageGenerator === 'imagen'"
           />
-          <label for="imagen" class="option-label">Imagen 3</label>
+          <label for="imagen" class="option-label">Imagen 4 Fast</label>
         </div>
         <div>
           <input
@@ -177,7 +177,7 @@
             (click)="setConfig('imageGenerator', 'veo')"
             [checked]="gameSettings.imageGenerator === 'veo'"
           />
-          <label for="veo" class="option-label">Veo</label>
+          <label for="veo" class="option-label">Veo 3.1 Fast</label>
         </div>
         <div>
           <input
@@ -188,7 +188,18 @@
             (click)="setConfig('imageGenerator', 'omni')"
             [checked]="gameSettings.imageGenerator === 'omni'"
           />
-          <label for="omni" class="option-label">Omni</label>
+          <label for="omni" class="option-label">Omni (Veo 3.1)</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="gemini-anim"
+            name="imageGenerator"
+            value="gemini-anim"
+            (click)="setConfig('imageGenerator', 'gemini-anim')"
+            [checked]="gameSettings.imageGenerator === 'gemini-anim'"
+          />
+          <label for="gemini-anim" class="option-label">Gemini 3.1 Animation (4-Frame)</label>
         </div>
       </div>
     </div>

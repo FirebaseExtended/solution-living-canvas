@@ -44,6 +44,6 @@ export class Preloader extends Scene {
   }
 
   create() {
-    this.scene.start('StageClean');
+    this.scene.start('IOPuzzle_Fire');
   }
 }

@@ -130,7 +130,7 @@ export class AppComponent implements AfterViewInit {
   phaserGame: Game;
   @ViewChild('gameContainer', { read: ViewContainerRef })
   gameContainer: ViewContainerRef;
-  currentScene: string = 'StageClean';
+  currentScene: string = 'IOPuzzle_Fire';
   gameSettings: any = {
     imageGenerator: 'imagen',
     visualStyle: 'realistic',

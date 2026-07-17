@@ -101,7 +101,7 @@ export async function applyRoundedCornersAndBorder(
       }" ry="${cornerRadius + borderWidth}"/></svg>`
     );
 
-    await image
+    const roundedInnerImageBuffer = await sharp(inputPath)
       .resize(innerWidth, innerHeight)
       .composite([
         {
@@ -109,18 +109,15 @@ export async function applyRoundedCornersAndBorder(
           blend: "dest-in", // Use the mask to determine which parts of the image to keep
         },
       ])
-      .resize(resizedWidth, resizedHeight) // Resize to include the border
+      .toBuffer();
+
+    await sharp(background)
       .composite([
-        // Composite the image onto the colored background
         {
-          input: background,
-          blend: "over", // Overlay the background first
-        },
-        {
-          input: await image.toBuffer(), // Re-apply the processed image
-          blend: "over", // Overlay the image on top of the background
-          left: Math.round(borderWidth / 4 - 1), // Offset for the border, ensure integer
-          top: Math.round(borderWidth / 4 - 1), // Offset for the border, ensure integer
+          input: roundedInnerImageBuffer,
+          blend: "over",
+          left: Math.round(borderWidth / 4 - 1),
+          top: Math.round(borderWidth / 4 - 1),
         },
         {
           input: background,

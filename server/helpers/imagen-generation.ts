@@ -16,19 +16,19 @@
 
 import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
+import { GoogleGenAI } from "@google/genai";
 import * as aiplatform from "@google-cloud/aiplatform";
 import util from "util";
 import fs from "fs";
 import { cacheManager } from "./cache-manager";
 
-const { projectId, location } = getGoogleCloudConfig();
+const { projectId, location, apiKey } = getGoogleCloudConfig();
 const { helpers } = aiplatform;
 const { PredictionServiceClient } = aiplatform.v1;
 
-// [START image_generation]
-// projectId = "your-google-cloud-project-id"
-// location = "us-central1"
-// imagenModel = "imagen-3.0-fast-generate-001"
+const ai = new GoogleGenAI({
+  apiKey: apiKey,
+});
 
 // Instantiates a client
 const predictionServiceClient = new PredictionServiceClient({
@@ -65,44 +65,88 @@ async function generateImageBuffer(
       throw new Error("Imagen model configuration not found");
     }
 
-    const endpoint = `projects/${projectId}/locations/${location}/publishers/google/models/${imagenModel}`;
-
     const textPrompt = aiConfig.buildPrompt(promptId, {
       type: objectType,
       visualStyle: visualStyle,
     });
 
-    const instances = [helpers.toValue({ prompt: textPrompt })];
-    const parameter = {
-      sampleCount: 1,
-      aspectRatio: "1:1",
-      safetySetting: aiConfig.getSafetySettings(),
-    };
-    const parameters = helpers.toValue(parameter);
+    let base64Image: string = "";
 
-    const request = {
-      endpoint,
-      instances,
-      parameters,
-    };
+    try {
+      const response = await ai.models.generateImages({
+        model: imagenModel,
+        prompt: textPrompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: "image/png",
+          aspectRatio: "1:1",
+        },
+      });
 
-    // @ts-ignore
-    const [response] = await predictionServiceClient.predict(request);
-    const predictions = response.predictions;
-
-    if (!predictions || predictions.length === 0) {
-      throw new Error(
-        "No image was generated. Check the request parameters and prompt."
+      if (response.generatedImages?.[0]?.image?.imageBytes) {
+        base64Image = response.generatedImages[0].image.imageBytes;
+      } else {
+        throw new Error("Empty image response from GoogleGenAI");
+      }
+    } catch (genAiError) {
+      console.warn(
+        "GoogleGenAI generateImages failed, trying REST predict API:",
+        genAiError instanceof Error ? genAiError.message : genAiError
       );
-    }
 
-    const prediction = predictions[0];
-    if (!prediction.structValue?.fields?.bytesBase64Encoded?.stringValue) {
-      throw new Error("Invalid prediction response format");
-    }
+      if (apiKey) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${imagenModel}:predict?key=${apiKey}`;
+        const restRes = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instances: [{ prompt: textPrompt }],
+            parameters: { sampleCount: 1, aspectRatio: "1:1" },
+          }),
+        });
+        const data: any = await restRes.json();
+        if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+          base64Image = data.predictions[0].bytesBase64Encoded;
+        } else {
+          throw new Error(
+            data.error?.message || "REST predict API failed to generate image"
+          );
+        }
+      } else {
+        const endpoint = `projects/${projectId}/locations/${location}/publishers/google/models/${imagenModel}`;
+        const instances = [helpers.toValue({ prompt: textPrompt })];
+        const parameter = {
+          sampleCount: 1,
+          aspectRatio: "1:1",
+          safetySetting: aiConfig.getSafetySettings(),
+        };
+        const parameters = helpers.toValue(parameter);
 
-    const base64Image =
-      prediction.structValue.fields.bytesBase64Encoded.stringValue;
+        const request = {
+          endpoint,
+          instances,
+          parameters,
+        };
+
+        // @ts-ignore
+        const [response] = await predictionServiceClient.predict(request);
+        const predictions = response.predictions;
+
+        if (!predictions || predictions.length === 0) {
+          throw new Error(
+            "No image was generated. Check the request parameters and prompt."
+          );
+        }
+
+        const prediction = predictions[0];
+        if (!prediction.structValue?.fields?.bytesBase64Encoded?.stringValue) {
+          throw new Error("Invalid prediction response format");
+        }
+
+        base64Image =
+          prediction.structValue.fields.bytesBase64Encoded.stringValue;
+      }
+    }
 
     if (!base64Image) {
       throw new Error("Generated image is empty");

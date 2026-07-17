@@ -20,7 +20,7 @@ import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
 
-const { projectId, location } = getGoogleCloudConfig();
+const { projectId, location, apiKey } = getGoogleCloudConfig();
 
 interface GenerationConfig {
   maxOutputTokens: number;
@@ -47,12 +47,14 @@ interface GeminiResponse {
   }>;
 }
 
-// Initialize Vertex with your Cloud project and location
-const ai = new GoogleGenAI({
-  vertexai: true,
-  project: projectId,
-  location: location || "us-central1",
-});
+// Initialize GoogleGenAI client with apiKey or Vertex AI config
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId,
+      location: location || "us-central1",
+    });
 
 // Set up generation config
 const generationConfig: GenerationConfig = {

@@ -132,7 +132,7 @@ app.post("/analyseImage", async (req: Request, res: Response) => {
     res.send(response);
   } catch (error) {
     console.log("Error in analyseImage", error);
-    throw new Error("Error in analyseImage");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in analyseImage" });
   }
 });
 
@@ -155,7 +155,7 @@ app.get("/checkError/:hash", (req: Request, res: Response) => {
     }
   } catch (error) {
     console.log("Error in checkError", error);
-    throw new Error("Error in checkError");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in checkError" });
   }
 });
 
@@ -186,7 +186,7 @@ app.get("/checkFrames/:hash", (req: Request, res: Response) => {
     });
   } catch (error) {
     console.log("Error in checkFrames", error);
-    throw new Error("Error in checkFrames");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in checkFrames" });
   }
 });
 
@@ -233,7 +233,7 @@ app.post("/generateImage", async (req: Request, res: Response) => {
       console.error("Error cleaning up existing files:", cleanupError);
     }
     
-    if (backend === "veo" || backend === "omni") {
+    if (backend === "veo" || backend === "omni" || backend === "gemini-anim") {
       try {
         const filenameOriginal = `output_${hash}_original.png`;
         const filepathOriginal = join("generated", filenameOriginal);
@@ -272,11 +272,8 @@ app.post("/generateImage", async (req: Request, res: Response) => {
         fs.copyFileSync(filepathSmall, filepath);
         return;
       } catch (error) {
-        throw new Error(
-          `${backend} image generation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
+        res.status(500).json({ error: error instanceof Error ? error.message : `${backend} image generation failed` });
+        return;
       }
     } else if (backend === "gemini") {
       await generateImageWithGemini(
@@ -294,23 +291,27 @@ app.post("/generateImage", async (req: Request, res: Response) => {
         filepath
       );
     } else {
-      throw new Error(`Unsupported backend: ${backend}`);
+      res.status(400).json({ error: `Unsupported backend: ${backend}` });
+      return;
     }
 
     if (!fs.existsSync(filepath)) {
-      throw new Error(`Failed to create image file at ${filepath}`);
+      res.status(500).json({ error: `Failed to create image file at ${filepath}` });
+      return;
     }
 
     await applyRoundedCornersAndBorder(filepath, filepathTemp);
 
     if (!fs.existsSync(filepathTemp)) {
-      throw new Error(`Failed to create temp image file at ${filepathTemp}`);
+      res.status(500).json({ error: `Failed to create temp image file at ${filepathTemp}` });
+      return;
     }
 
     await resizeImage(filepathTemp, filepathSmall);
 
     if (!fs.existsSync(filepathSmall)) {
-      throw new Error(`Failed to create small image file at ${filepathSmall}`);
+      res.status(500).json({ error: `Failed to create small image file at ${filepathSmall}` });
+      return;
     }
 
     fs.copyFileSync(filepathSmall, filepath);
@@ -320,7 +321,7 @@ app.post("/generateImage", async (req: Request, res: Response) => {
     res.send(result);
   } catch (error) {
     console.log("Error in generateImage", error);
-    throw new Error("Error in generateImage");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in generateImage" });
   }
 });
 
@@ -347,7 +348,7 @@ app.post("/textToCommand", async (req: Request, res: Response) => {
     res.send(result);
   } catch (error) {
     console.log("Error in textToCommand", error);
-    throw new Error("Error in textToCommand");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Error in textToCommand" });
   }
 });
 

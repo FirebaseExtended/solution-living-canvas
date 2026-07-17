@@ -956,7 +956,7 @@ export class LivingCanvasStage extends Scene {
       }
 
       // Handle different response types based on backend
-      if (generatorType === 'veo' || generatorType === 'omni') {
+      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim') {
         // For Veo and Omni, we expect a JSON response with a hash
         const result = await response.json();
         if (result.error) {
@@ -994,6 +994,7 @@ export class LivingCanvasStage extends Scene {
         break;
       case 'veo':
       case 'omni':
+      case 'gemini-anim':
         this.logVeoGenerationResponse('data:image/png;base64,' + imageData);
         break;
     }
@@ -1093,7 +1094,7 @@ export class LivingCanvasStage extends Scene {
       // ...
       // [END process_canvas]
 
-      if (generatorType === 'veo' || generatorType === 'omni') {
+      if (generatorType === 'veo' || generatorType === 'omni' || generatorType === 'gemini-anim') {
         // Handle Veo/Omni animation
         const hash = generatedImageData;
         const staticImageUrl = this.constructServerUrl(
@@ -2304,6 +2305,7 @@ export class LivingCanvasStage extends Scene {
         break;
       case 'veo':
       case 'omni':
+      case 'gemini-anim':
         // Imagen particles for image generation step
         sparkleTexture = 'imagen_sparkle';
         break;

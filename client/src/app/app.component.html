@@ -144,162 +144,84 @@
 
   <div id="game-settings">
     <div class="settings-group">
-      <label class="group-label">Image backend</label>
-      <div class="options-container">
-        <div>
-          <input
-            type="radio"
-            id="gemini"
-            name="imageGenerator"
-            value="gemini"
-            (click)="setConfig('imageGenerator', 'gemini')"
-            [checked]="gameSettings.imageGenerator === 'gemini'"
-          />
-          <label for="gemini" class="option-label">Gemini 3.1 Flash-Lite</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="imagen"
-            name="imageGenerator"
-            value="imagen"
-            (click)="setConfig('imageGenerator', 'imagen')"
-            [checked]="gameSettings.imageGenerator === 'imagen'"
-          />
-          <label for="imagen" class="option-label">Imagen 4 Fast</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="veo"
-            name="imageGenerator"
-            value="veo"
-            (click)="setConfig('imageGenerator', 'veo')"
-            [checked]="gameSettings.imageGenerator === 'veo'"
-          />
-          <label for="veo" class="option-label">Veo 3.1 Fast</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="omni"
-            name="imageGenerator"
-            value="omni"
-            (click)="setConfig('imageGenerator', 'omni')"
-            [checked]="gameSettings.imageGenerator === 'omni'"
-          />
-          <label for="omni" class="option-label">Omni (Veo 3.1)</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="gemini-anim"
-            name="imageGenerator"
-            value="gemini-anim"
-            (click)="setConfig('imageGenerator', 'gemini-anim')"
-            [checked]="gameSettings.imageGenerator === 'gemini-anim'"
-          />
-          <label for="gemini-anim" class="option-label">Gemini 3.1 Animation (4-Frame)</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="gemma-cga"
-            name="imageGenerator"
-            value="gemma-cga"
-            (click)="setConfig('imageGenerator', 'gemma-cga')"
-            [checked]="gameSettings.imageGenerator === 'gemma-cga'"
-          />
-          <label for="gemma-cga" class="option-label">Gemma CGA Pixel Art (MediaPipe)</label>
+      <label class="group-label">Graphics backend</label>
+      <div class="selector-box">
+        <button class="selector-trigger" type="button">
+          <span class="selected-text">{{ getSelectedLabel('imageGenerator') }}</span>
+          <span class="options-hint">+5 models ▾</span>
+        </button>
+        <div class="selector-menu">
+          <div class="selector-header">Image Models</div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'imagen')" [class.active]="gameSettings.imageGenerator === 'imagen'">
+            Imagen 4 Fast
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemini')" [class.active]="gameSettings.imageGenerator === 'gemini'">
+            Gemini 3.1 Flash-Lite
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemini-anim')" [class.active]="gameSettings.imageGenerator === 'gemini-anim'">
+            Gemini 3.1 Animation (4-Frame)
+          </div>
+
+          <div class="selector-header">Video Models (with frame extraction)</div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'veo')" [class.active]="gameSettings.imageGenerator === 'veo'">
+            Veo 3.1 Fast
+          </div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'omni')" [class.active]="gameSettings.imageGenerator === 'omni'">
+            Omni (Veo 3.1)
+          </div>
+
+          <div class="selector-header">Local Models</div>
+          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemma-cga')" [class.active]="gameSettings.imageGenerator === 'gemma-cga'">
+            Gemma CGA Pixel Art (MediaPipe)
+          </div>
         </div>
       </div>
     </div>
 
     <div class="settings-group">
       <label class="group-label">Image-to-text analysis</label>
-      <div class="options-container">
-        <div>
-          <input
-            type="radio"
-            id="analysis-gemini"
-            name="imageAnalysis"
-            value="gemini"
-            (click)="setConfig('imageAnalysis', 'gemini')"
-            [checked]="gameSettings.imageAnalysis === 'gemini' || !gameSettings.imageAnalysis"
-          />
-          <label for="analysis-gemini" class="option-label">Gemini 2.5 Flash</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="analysis-gemma"
-            name="imageAnalysis"
-            value="gemma-mediapipe"
-            (click)="setConfig('imageAnalysis', 'gemma-mediapipe')"
-            [checked]="gameSettings.imageAnalysis === 'gemma-mediapipe'"
-          />
-          <label for="analysis-gemma" class="option-label">Gemma 4 (MediaPipe)</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="analysis-chrome"
-            name="imageAnalysis"
-            value="chrome-llm"
-            (click)="setConfig('imageAnalysis', 'chrome-llm')"
-            [checked]="gameSettings.imageAnalysis === 'chrome-llm'"
-          />
-          <label for="analysis-chrome" class="option-label">Chrome Built-in Model</label>
+      <div class="selector-box">
+        <button class="selector-trigger" type="button">
+          <span class="selected-text">{{ getSelectedLabel('imageAnalysis') }}</span>
+          <span class="options-hint">+2 models ▾</span>
+        </button>
+        <div class="selector-menu">
+          <div class="selector-header">Server Models</div>
+          <div class="selector-option" (click)="setConfig('imageAnalysis', 'gemini')" [class.active]="gameSettings.imageAnalysis === 'gemini' || !gameSettings.imageAnalysis">
+            Gemini 2.5 Flash
+          </div>
+
+          <div class="selector-header">Local Models</div>
+          <div class="selector-option" (click)="setConfig('imageAnalysis', 'gemma-mediapipe')" [class.active]="gameSettings.imageAnalysis === 'gemma-mediapipe'">
+            Gemma 4 (MediaPipe)
+          </div>
+          <div class="selector-option" (click)="setConfig('imageAnalysis', 'chrome-llm')" [class.active]="gameSettings.imageAnalysis === 'chrome-llm'">
+            Chrome Built-in Model
+          </div>
         </div>
       </div>
     </div>
 
     <div class="settings-group">
       <label class="group-label">Art style</label>
-      <div class="options-container">
-        <div>
-          <input
-            type="radio"
-            id="realistic"
-            name="visualStyle"
-            value="realistic"
-            (click)="setConfig('visualStyle', 'realistic')"
-            [checked]="gameSettings.visualStyle === 'realistic'"
-          />
-          <label for="realistic" class="option-label">Realistic</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="cartoon"
-            name="visualStyle"
-            value="cartoon"
-            (click)="setConfig('visualStyle', 'cartoon')"
-            [checked]="gameSettings.visualStyle === 'cartoon'"
-          />
-          <label for="cartoon" class="option-label">Cartoon</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="pixellated"
-            name="visualStyle"
-            value="pixellated"
-            (click)="setConfig('visualStyle', 'pixellated')"
-            [checked]="gameSettings.visualStyle === 'pixellated'"
-          />
-          <label for="pixellated" class="option-label">Pixellated</label>
-        </div>
-        <div>
-          <input
-            type="radio"
-            id="mask"
-            name="visualStyle"
-            value="mask"
-            (click)="setConfig('visualStyle', 'mask')"
-            [checked]="gameSettings.visualStyle === 'mask'"
-          />
-          <label for="mask" class="option-label">Mask</label>
+      <div class="selector-box">
+        <button class="selector-trigger" type="button">
+          <span class="selected-text">{{ getSelectedLabel('visualStyle') }}</span>
+          <span class="options-hint">+3 styles ▾</span>
+        </button>
+        <div class="selector-menu">
+          <div class="selector-option" (click)="setConfig('visualStyle', 'realistic')" [class.active]="gameSettings.visualStyle === 'realistic'">
+            Realistic
+          </div>
+          <div class="selector-option" (click)="setConfig('visualStyle', 'cartoon')" [class.active]="gameSettings.visualStyle === 'cartoon'">
+            Cartoon
+          </div>
+          <div class="selector-option" (click)="setConfig('visualStyle', 'pixellated')" [class.active]="gameSettings.visualStyle === 'pixellated'">
+            Pixel Art
+          </div>
+          <div class="selector-option" (click)="setConfig('visualStyle', 'mask')" [class.active]="gameSettings.visualStyle === 'mask'">
+            Mask
+          </div>
         </div>
       </div>
     </div>

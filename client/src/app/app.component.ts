@@ -296,6 +296,37 @@ export class AppComponent implements AfterViewInit {
 
   loadPuzzle() {}
 
+  getSelectedLabel(category: string): string {
+    const val = this.gameSettings[category];
+    if (category === 'imageGenerator') {
+      const labels: Record<string, string> = {
+        'gemini': 'Gemini 3.1 Flash-Lite',
+        'imagen': 'Imagen 4 Fast',
+        'veo': 'Veo 3.1 Fast',
+        'omni': 'Omni (Veo 3.1)',
+        'gemini-anim': 'Gemini 3.1 Animation (4-Frame)',
+        'gemma-cga': 'Gemma CGA Pixel Art (MediaPipe)',
+      };
+      return labels[val] || 'Select Model';
+    } else if (category === 'imageAnalysis') {
+      const labels: Record<string, string> = {
+        'gemini': 'Gemini 2.5 Flash',
+        'gemma-mediapipe': 'Gemma 4 (MediaPipe)',
+        'chrome-llm': 'Chrome Built-in Model',
+      };
+      return labels[val] || 'Gemini 2.5 Flash';
+    } else if (category === 'visualStyle') {
+      const labels: Record<string, string> = {
+        'realistic': 'Realistic',
+        'cartoon': 'Cartoon',
+        'pixellated': 'Pixel Art',
+        'outline': 'Mask',
+      };
+      return labels[val] || 'Realistic';
+    }
+    return '';
+  }
+
   setConfig(key: string, value: any) {
     this.gameSettings[key] = value;
     this.updatePhaser();

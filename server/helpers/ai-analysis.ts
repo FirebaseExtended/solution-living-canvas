@@ -384,28 +384,54 @@ async function sendMultimodalRequest(
       genConfig.responseSchema = schema;
     }
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: contents,
-      config: genConfig,
-    });
+    try {
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: contents,
+        config: genConfig,
+      });
 
-    const candidate = response.candidates?.[0];
-    if (candidate?.finishReason === "SAFETY") {
-      return "__BLOCKED__";
+      const candidate = response.candidates?.[0];
+      if (candidate?.finishReason === "SAFETY") {
+        return "__BLOCKED__";
+      }
+
+      const text = response.text || candidate?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error("Invalid response format from AI model");
+      }
+
+      return text;
+    } catch (primaryError) {
+      console.warn(
+        `Primary model ${model} failed, attempting fallback to gemini-2.5-flash:`,
+        primaryError instanceof Error ? primaryError.message : primaryError
+      );
+      if (model !== "gemini-2.5-flash") {
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: contents,
+          config: genConfig,
+        });
+
+        const candidate = response.candidates?.[0];
+        if (candidate?.finishReason === "SAFETY") {
+          return "__BLOCKED__";
+        }
+
+        const text = response.text || candidate?.content?.parts?.[0]?.text;
+        if (text) {
+          return text;
+        }
+      }
+      throw primaryError;
     }
-
-    const text = response.text || candidate?.content?.parts?.[0]?.text;
-    if (!text) {
-      throw new Error("Invalid response format from AI model");
-    }
-
-    return text;
   } catch (error: any) {
     console.error("Error in sendMultimodalRequest:", error);
     throw error;
   }
 }
+
 
 
 function getVerbs() {

@@ -1,0 +1,10 @@
+# Environment variables and secrets
+env:
+  - variable: GOOGLE_CLOUD_PROJECT_ID
+    value: living-canvas-prod-3
+  - variable: GOOGLE_CLOUD_LOCATION
+    value: us-central1
+  - variable: GOOGLE_API_KEY
+    secret: projects/115403704542/secrets/gen-ai-key
+  - variable: PORT
+    value: 8080

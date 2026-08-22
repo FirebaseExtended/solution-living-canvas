@@ -36,4 +36,5 @@ server/.env
 /server/dist
 /server/public
 /client/dist
+.firebase
 

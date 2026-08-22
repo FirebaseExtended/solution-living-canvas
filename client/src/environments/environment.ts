@@ -16,6 +16,6 @@
 
 export const environment = {
     production: true,
-    // The server is accessible at the same domain and path
     backendUrl: '',
-}
+    localOnly: false,
+};

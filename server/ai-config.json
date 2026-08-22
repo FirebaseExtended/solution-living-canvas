@@ -5,7 +5,8 @@
     "generation_imagen": "imagen-4.0-fast-generate-001",
     "veo_generation": "veo-3.1-fast-generate-preview",
     "omni_generation": "veo-3.1-fast-generate-preview",
-    "gemini_anim_generation": "gemini-3.1-flash-lite-image"
+    "gemini_anim_generation": "gemini-3.1-flash-lite-image",
+    "gemma_model": "gemma-2-9b-it"
   },
   "prompts": {
     "analysis_initialGuess": "If this image contains a drawing, which of these options are the best way to describe this image? If the image contains written text, what does the text say? Or say 'none' if the image does not match any of the types. {{types}}",

@@ -1,0 +1,8 @@
+node_modules
+client/node_modules
+server/node_modules
+.git
+.github
+server/generated
+server/dist
+server/public

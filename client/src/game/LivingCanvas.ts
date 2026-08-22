@@ -897,8 +897,63 @@ export class LivingCanvasStage extends Scene {
   }
 
   // [START send_image_data]
+  get gemmaModelService(): any {
+    // @ts-ignore
+    return this.game?.app?.gemmaModelService || null;
+  }
+
+  async renderCGAGridToBase64(grid: number[][]): Promise<string> {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    const CGA_PALETTE: { [key: number]: string } = {
+      0: "#000000", 1: "#0000AA", 2: "#00AA00", 3: "#00AAAA",
+      4: "#AA0000", 5: "#AA00AA", 6: "#AA5500", 7: "#AAAAAA",
+      8: "#555555", 9: "#5555FF", 10: "#55FF55", 11: "#55FFFF",
+      12: "#FF5555", 13: "#FF55FF", 14: "#FFFF55", 15: "#FFFFFF"
+    };
+
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const cellW = 512 / cols;
+    const cellH = 512 / rows;
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const colorVal = grid[r][c];
+        if (colorVal !== 0) {
+          ctx.fillStyle = CGA_PALETTE[colorVal] || '#FFFFFF';
+          ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+        }
+      }
+    }
+
+    return canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+  }
+
+  // [START send_image_data]
   async sendImageDataToServerForAnalysis(b64: string) {
-    const url = this.constructServerUrl('analyseImage');
+    if (this.gameSettings.imageAnalysis === 'gemma-mediapipe') {
+      console.log('%c[Gemma Model] Running Gemma 4 (MediaPipe) model in browser from Hugging Face...', 'color: #8ea8f9; font-weight: bold;');
+      if (this.gemmaModelService) {
+        return await this.gemmaModelService.analyzeImage(b64);
+      }
+    } else if (this.gameSettings.imageAnalysis === 'chrome-llm') {
+      console.log('%c[Gemma Model] Accessing local Chrome Built-in Model (window.ai.languageModel)...', 'color: #8ea8f9; font-weight: bold;');
+      return this.analyzeImageWithChromeLLM(b64);
+    } else {
+      console.log('[Server Model] Loading Gemini 2.5 Flash analysis model...');
+    }
+
+    const endpoint = 'analyseImage';
+    const url = this.constructServerUrl(endpoint);
+    console.log(`[Model Analysis] Dispatching drawing payload to ${endpoint}...`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -911,19 +966,55 @@ export class LivingCanvasStage extends Scene {
     });
 
     if (!response.ok) {
-      console.log('Error in sendImageDataToServerForAnalysis', response);
+      console.error(`Error in sendImageDataToServerForAnalysis (${endpoint}):`, response);
       return null;
     }
 
-    console.log(response.body);
-
     if (response.body !== null) {
-      console.log(response.body);
-
       const res = await response.json();
-      console.log(res);
+      console.log(`%c[Model Analysis Response] Result from ${endpoint}:`, 'color: #7b95e6; font-weight: bold;', res);
       return res;
     }
+  }
+
+  async analyzeImageWithChromeLLM(b64: string) {
+    console.log('%c[Gemma Model] Connecting to Chrome Built-in Model (Gemini Nano) via window.ai.languageModel...', 'color: #8ea8f9; font-weight: bold;');
+    try {
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.ai && window.ai.languageModel) {
+        console.log('[Gemma Model] Initializing Chrome Prompt API session...');
+        // @ts-ignore
+        const capabilities = await window.ai.languageModel.capabilities();
+        console.log('[Gemma Model] Chrome Language Model Capabilities:', capabilities);
+        // @ts-ignore
+        const session = await window.ai.languageModel.create();
+        console.log('%c[Gemma Model] Chrome Gemini Nano session created successfully', 'color: #7b95e6;');
+        const prompt = 'Analyze this drawing object. Output JSON format: {"type": "Fire", "attributes": ["burns", "solid"]}';
+        const responseText = await session.prompt(prompt);
+        console.log('[Gemma Model] Response from Chrome Gemini Nano:', responseText);
+        const match = responseText.match(/\{[\s\S]*\}/);
+        if (match) {
+          return JSON.parse(match[0]);
+        }
+      } else {
+        console.warn('[Gemma Model] window.ai.languageModel not available on this browser, falling back to server Gemma analysis.');
+      }
+    } catch (err) {
+      console.warn('[Gemma Model] Error calling Chrome Built-in Model, falling back to server Gemma analysis:', err);
+    }
+    return this.sendImageDataToServerForAnalysisFallback(b64, 'analyseImageGemma');
+  }
+
+  async sendImageDataToServerForAnalysisFallback(b64: string, endpoint: string) {
+    const url = this.constructServerUrl(endpoint);
+    console.log(`[Gemma Model Fallback] Calling ${endpoint} endpoint...`);
+    const response = await fetch(url, {
+      method: 'POST',
+      body: new URLSearchParams({ prompt: b64 }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+    });
+    if (!response.ok) return null;
+    return await response.json();
   }
   // [END send_image_data]
 
@@ -932,9 +1023,23 @@ export class LivingCanvasStage extends Scene {
     imageData: string,
     generatorType: string
   ) {
+    if (generatorType === 'gemma-cga' || generatorType === 'gemma-diffusion') {
+      console.log(`%c[Gemma Model] Executing ${generatorType} in browser WebGPU via Hugging Face weights...`, 'color: #8ea8f9; font-weight: bold;');
+      if (this.gemmaModelService) {
+        const grid = await this.gemmaModelService.generateCGAGrid(prompt, 0);
+        return await this.renderCGAGridToBase64(grid);
+      }
+    }
+
     const url = this.constructServerUrl('generateImage');
 
-    console.log('Sending to backend:', generatorType);
+    if (generatorType === 'gemma-anim') {
+      console.log('%c[Gemma Model] Loading Gemma Animation (4-Frame) model...', 'color: #8ea8f9; font-weight: bold;');
+    } else if (generatorType === 'gemma-diff-anim') {
+      console.log('%c[Gemma Model] Loading DiffusionGemma Animation (4-Frame) model...', 'color: #8ea8f9; font-weight: bold;');
+    } else {
+      console.log(`[Server Model] Loading ${generatorType} generation model...`);
+    }
 
     try {
       const response = await fetch(url, {
@@ -962,6 +1067,7 @@ export class LivingCanvasStage extends Scene {
         if (result.error) {
           throw new Error(result.error);
         }
+        console.log(`%c[Gemma/Video Model] Generation hash received for ${generatorType}: ${result.hash}`, 'color: #7b95e6;');
         return result.hash;
       } else {
         // For Imagen and Gemini, we expect base64 text
@@ -970,10 +1076,11 @@ export class LivingCanvasStage extends Scene {
           console.log('Error in sendToImageGenerationBackend', b64);
           throw new Error(b64.substring(6));
         }
+        console.log(`%c[Gemma/Image Model] Image payload received from ${generatorType} (${b64.length} chars)`, 'color: #7b95e6;');
         return b64;
       }
     } catch (error) {
-      console.error('Error in image generation:', error);
+      console.error(`Error in image generation (${generatorType}):`, error);
       throw error;
     }
   }

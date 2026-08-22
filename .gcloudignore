@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.github
+node_modules/
+client/node_modules/
+server/node_modules/
+server/generated/
+server/dist/
+server/public/

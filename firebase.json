@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "public": "server/public/browser",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "living-canvas-prod-2-july",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}

@@ -15,7 +15,7 @@
  */
 
 export const environment = {
-    production: false,
+    production: true,
     backendUrl: '',
-    localOnly: false,
+    localOnly: true,
 };

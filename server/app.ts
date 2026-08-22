@@ -38,7 +38,7 @@ import {
   generateVideoAndFrames,
 } from "./helpers/veo-generation";
 import { generateImageWithImagen } from "./helpers/imagen-generation";
-import { generateImageWithGemmaCGA, generateImageWithGemmaDiffusion } from "./helpers/gemma-cga-generation";
+import { generateImageWithGemmaCGA, generateImageWithGemmaDiffusion, queryRemoteGemmaModel } from "./helpers/gemma-cga-generation";
 import { config } from "./helpers/ai-config-helper";
 
 const { port } = getServerConfig();
@@ -147,7 +147,24 @@ app.post("/analyseImageGemma", async (req: Request, res: Response) => {
     }
 
     const trimmedData = imageData.startsWith("data:image/") ? imageData.slice(22) : imageData;
-    console.log("[Gemma 4 MediaPipe] Performing MediaPipe analysis on drawing...");
+    console.log("[Gemma 4 MediaPipe] Performing remote Gemma analysis on drawing...");
+
+    const prompt = `Analyze this drawing image and identify what object it represents from this list: Tree, Heart, Spaceship, Bird, Human, Turret, Rock, Water, Fire, Arrow, Animal, Lightning, Cloud, Boat, Car, Dynamite, Bomb, Ball, Bricks, Fan, Ice, Magnet, Metal. Return ONLY a valid JSON object like {"type": "Fire", "attributes": ["burns", "solid", "falls"]}.`;
+
+    try {
+      const rawText = await queryRemoteGemmaModel(prompt, trimmedData);
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.type && config.isInappropriateContent(parsed.type)) {
+          return res.json(config.getSafetySettingsResponse());
+        }
+        return res.json(parsed);
+      }
+    } catch (gemmaErr) {
+      console.warn("[Gemma 4 MediaPipe] Remote Gemma call failed, using fallback:", gemmaErr);
+    }
+
     const response = await imageToConfig(trimmedData);
 
     if (response.type && config.isInappropriateContent(response.type)) {

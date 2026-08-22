@@ -152,21 +152,41 @@
         </button>
         <div class="selector-menu">
           <div class="selector-header">Image Models</div>
-          <div class="selector-option" (click)="setConfig('imageGenerator', 'imagen')" [class.active]="gameSettings.imageGenerator === 'imagen'">
+          <div class="selector-option" 
+               (click)="setConfig('imageGenerator', 'imagen')" 
+               [class.active]="gameSettings.imageGenerator === 'imagen'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('imagen')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('imagen')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Imagen 4 Fast
           </div>
-          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemini')" [class.active]="gameSettings.imageGenerator === 'gemini'">
+          <div class="selector-option" 
+               (click)="setConfig('imageGenerator', 'gemini')" 
+               [class.active]="gameSettings.imageGenerator === 'gemini'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('gemini')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Gemini 3.1 Flash-Lite
           </div>
-          <div class="selector-option" (click)="setConfig('imageGenerator', 'gemini-anim')" [class.active]="gameSettings.imageGenerator === 'gemini-anim'">
+          <div class="selector-option" 
+               (click)="setConfig('imageGenerator', 'gemini-anim')" 
+               [class.active]="gameSettings.imageGenerator === 'gemini-anim'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('gemini-anim')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini-anim')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Gemini 3.1 Animation (4-Frame)
           </div>
 
           <div class="selector-header">Video Models (with frame extraction)</div>
-          <div class="selector-option" (click)="setConfig('imageGenerator', 'veo')" [class.active]="gameSettings.imageGenerator === 'veo'">
+          <div class="selector-option" 
+               (click)="setConfig('imageGenerator', 'veo')" 
+               [class.active]="gameSettings.imageGenerator === 'veo'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('veo')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('veo')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Veo 3.1 Fast
           </div>
-          <div class="selector-option" (click)="setConfig('imageGenerator', 'omni')" [class.active]="gameSettings.imageGenerator === 'omni'">
+          <div class="selector-option" 
+               (click)="setConfig('imageGenerator', 'omni')" 
+               [class.active]="gameSettings.imageGenerator === 'omni'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('omni')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('omni')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Omni (Veo 3.1)
           </div>
 
@@ -196,7 +216,11 @@
         </button>
         <div class="selector-menu">
           <div class="selector-header">Server Models</div>
-          <div class="selector-option" (click)="setConfig('imageAnalysis', 'gemini')" [class.active]="gameSettings.imageAnalysis === 'gemini' || !gameSettings.imageAnalysis">
+          <div class="selector-option" 
+               (click)="setConfig('imageAnalysis', 'gemini')" 
+               [class.active]="gameSettings.imageAnalysis === 'gemini'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('gemini')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Gemini 2.5 Flash
           </div>
 
@@ -327,6 +351,18 @@
       </li>
     </ul>
   </app-dialog>
+
+  <!-- Gemma Model Browser Loading Banner -->
+  <div class="gemma-status-banner" *ngIf="gemmaStatus.state === 'loading' || gemmaStatus.state === 'ready' || gemmaStatus.state === 'error'" [class]="gemmaStatus.state">
+    <div class="banner-header">
+      <span class="banner-icon">🤖</span>
+      <span class="banner-title">Gemma Model (Hugging Face WebGPU)</span>
+    </div>
+    <div class="banner-message">{{ gemmaStatus.message }}</div>
+    <div class="banner-progress-bar" *ngIf="gemmaStatus.state === 'loading'">
+      <div class="banner-progress-fill" [style.width.%]="gemmaStatus.progress"></div>
+    </div>
+  </div>
 </div>
 <script type="module" src="/src/main.ts"></script>
 

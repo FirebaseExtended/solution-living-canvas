@@ -20,10 +20,72 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import ffmpeg from "ffmpeg-static";
+import { GoogleGenAI } from "@google/genai";
 import { applyRoundedCornersAndBorder } from "./image-processing";
 import { cacheManager } from "./cache-manager";
+import { getGoogleCloudConfig } from "../config";
+import { config as aiConfig } from "./ai-config-helper";
 
 const execAsync = promisify(exec);
+const { projectId, location, apiKey } = getGoogleCloudConfig();
+
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId,
+      location: location || "us-central1",
+    });
+
+export async function queryRemoteGemmaModel(
+  prompt: string,
+  inputImageBase64?: string
+): Promise<string> {
+  console.log(`[Remote Gemma Model] Querying remote Gemma model (${aiConfig.models["gemma_model"] || "gemma-2-9b-it"})...`);
+  try {
+    const modelName = aiConfig.models["gemma_model"] || "gemma-2-9b-it";
+    const contents: any[] = [{ text: prompt }];
+
+    if (inputImageBase64) {
+      contents.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: inputImageBase64.startsWith("data:image/")
+            ? inputImageBase64.slice(inputImageBase64.indexOf(",") + 1)
+            : inputImageBase64,
+        },
+      });
+    }
+
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: contents,
+    });
+
+    const text = response.text || "";
+    console.log(`[Remote Gemma Model] Success response received from ${modelName}`);
+    return text;
+  } catch (error) {
+    console.warn(`[Remote Gemma Model] GenAI call failed, trying Hugging Face endpoint fallback:`, error);
+    const hfToken = process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || "";
+    const hfRes = await fetch("https://api-inference.huggingface.co/models/google/gemma-2-9b-it", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(hfToken ? { Authorization: `Bearer ${hfToken}` } : {}),
+      },
+      body: JSON.stringify({ inputs: prompt }),
+    });
+
+    if (hfRes.ok) {
+      const hfData = await hfRes.json();
+      if (Array.isArray(hfData) && hfData[0]?.generated_text) {
+        return hfData[0].generated_text;
+      }
+    }
+    throw error;
+  }
+}
 
 // 16-Color Standard CGA Color Palette
 const CGA_PALETTE: { [key: number]: string } = {
@@ -46,10 +108,9 @@ const CGA_PALETTE: { [key: number]: string } = {
 };
 
 // Base 16x16 CGA Sprite Generators
-function getCGAGridForObject(objectType: string, frameIndex = 0): number[][] {
+function getCGAGridForObjectLocal(objectType: string, frameIndex = 0): number[][] {
   const typeLower = objectType.toLowerCase();
   const grid: number[][] = Array.from({ length: 16 }, () => Array(16).fill(0));
-  const shift = (frameIndex * 2) % 4;
 
   if (typeLower.includes("tree")) {
     for (let r = 2; r <= 8; r++) {
@@ -84,7 +145,6 @@ function getCGAGridForObject(objectType: string, frameIndex = 0): number[][] {
     for (let r = 10; r <= 12; r++) {
       for (let c = 2; c <= 14; c++) grid[r][c] = 12;
     }
-    // Animated wheel rotation
     const w1 = frameIndex % 2 === 0 ? 8 : 7;
     const w2 = frameIndex % 2 === 0 ? 7 : 8;
     grid[13][3] = w1; grid[13][4] = w2;
@@ -101,9 +161,25 @@ function getCGAGridForObject(objectType: string, frameIndex = 0): number[][] {
   return grid;
 }
 
+export async function getCGAGridForObject(objectType: string, frameIndex = 0): Promise<number[][]> {
+  try {
+    const prompt = `You are a 16x16 CGA pixel art generator. Output a valid JSON 16x16 2D array of numbers between 0 and 15 representing a 2D CGA pixel sprite of a ${objectType} (frame ${frameIndex} of 4). CGA Palette: 0=Black, 1=Blue, 2=Green, 3=Cyan, 4=Red, 5=Magenta, 6=Brown, 7=LightGray, 8=DarkGray, 9=BrightBlue, 10=BrightGreen, 11=BrightCyan, 12=BrightRed, 13=BrightMagenta, 14=Yellow, 15=White. Return ONLY the 16x16 JSON array, e.g. [[0,0,...],[0,4,...]].`;
+    const responseText = await queryRemoteGemmaModel(prompt);
+    const match = responseText.match(/\[\s*\[[\s\S]*\]\s*\]/);
+    if (match) {
+      const grid = JSON.parse(match[0]);
+      if (Array.isArray(grid) && grid.length === 16) {
+        return grid;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Remote Gemma] Procedural fallback for CGA grid ${objectType}`);
+  }
+  return getCGAGridForObjectLocal(objectType, frameIndex);
+}
+
 // Gemma Feedback / Self-Refinement Pass (Enhances highlights & outlines)
-function refineCGAGridWithGemma(grid: number[][], objectType: string): number[][] {
-  console.log(`[Gemma Refinement Loop] Analyzing and refining CGA grid for ${objectType}...`);
+function refineCGAGridWithGemmaLocal(grid: number[][], objectType: string): number[][] {
   const refined: number[][] = grid.map(row => [...row]);
   const rows = grid.length;
   const cols = grid[0].length;
@@ -111,21 +187,37 @@ function refineCGAGridWithGemma(grid: number[][], objectType: string): number[][
   for (let r = 1; r < rows - 1; r++) {
     for (let c = 1; c < cols - 1; c++) {
       if (grid[r][c] !== 0) {
-        // Add top-left highlight (White / Bright Color)
         if (grid[r - 1][c] === 0 || grid[r][c - 1] === 0) {
-          if (grid[r][c] === 2) refined[r][c] = 10; // Bright Green
-          else if (grid[r][c] === 4) refined[r][c] = 12; // Bright Red
-          else if (grid[r][c] === 3) refined[r][c] = 11; // Bright Cyan
+          if (grid[r][c] === 2) refined[r][c] = 10;
+          else if (grid[r][c] === 4) refined[r][c] = 12;
+          else if (grid[r][c] === 3) refined[r][c] = 11;
         }
-        // Add bottom-right shadow (Dark Gray / Black outline)
         if (grid[r + 1][c] === 0 || grid[r][c + 1] === 0) {
-          refined[r][c] = 8; // Dark Gray
+          refined[r][c] = 8;
         }
       }
     }
   }
 
   return refined;
+}
+
+export async function refineCGAGridWithGemma(grid: number[][], objectType: string): Promise<number[][]> {
+  console.log(`[Gemma Refinement Loop] Querying Gemma model to refine CGA grid for ${objectType}...`);
+  try {
+    const prompt = `You are Gemma, an AI pixel art enhancer. Analyze this 16x16 CGA grid for ${objectType} and return the refined 16x16 CGA grid with enhanced highlights (Bright Cyan 11, Bright Red 12, Bright Green 10) on top-left edges and dark outlines (Dark Gray 8) on bottom-right edges. Input grid: ${JSON.stringify(grid)}. Return ONLY the refined JSON 16x16 array.`;
+    const responseText = await queryRemoteGemmaModel(prompt);
+    const match = responseText.match(/\[\s*\[[\s\S]*\]\s*\]/);
+    if (match) {
+      const refined = JSON.parse(match[0]);
+      if (Array.isArray(refined) && refined.length === 16) {
+        return refined;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Remote Gemma] Local fallback for grid refinement ${objectType}`);
+  }
+  return refineCGAGridWithGemmaLocal(grid, objectType);
 }
 
 export async function renderCGAGridToImage(
@@ -166,8 +258,8 @@ export async function generateImageWithGemmaCGA(
   console.log(`[Gemma MediaPipe CGA] Generating pixel art sprite for ${objectType}...`);
 
   try {
-    const rawGrid = getCGAGridForObject(objectType, 0);
-    const refinedGrid = refineCGAGridWithGemma(rawGrid, objectType);
+    const rawGrid = await getCGAGridForObject(objectType, 0);
+    const refinedGrid = await refineCGAGridWithGemma(rawGrid, objectType);
     await renderCGAGridToImage(refinedGrid, outputPath);
 
     console.log(`[Gemma MediaPipe CGA] Saved refined CGA sprite to ${outputPath}`);
@@ -185,8 +277,8 @@ export async function generateImageWithGemmaDiffusion(
 ): Promise<string> {
   console.log(`[DiffusionGemma MediaPipe] Generating DiffusionGemma image for ${objectType}...`);
   try {
-    const rawGrid = getCGAGridForObject(objectType, 0);
-    const refinedGrid = refineCGAGridWithGemma(rawGrid, objectType);
+    const rawGrid = await getCGAGridForObject(objectType, 0);
+    const refinedGrid = await refineCGAGridWithGemma(rawGrid, objectType);
     await renderCGAGridToImage(refinedGrid, outputPath);
 
     console.log(`[DiffusionGemma MediaPipe] Saved image to ${outputPath}`);
@@ -210,8 +302,8 @@ export async function generateGemmaAnimFrames(
   const framesData: string[] = [];
 
   for (let i = 0; i < 4; i++) {
-    const rawGrid = getCGAGridForObject(objectType, i);
-    const refinedGrid = refineCGAGridWithGemma(rawGrid, objectType);
+    const rawGrid = await getCGAGridForObject(objectType, i);
+    const refinedGrid = await refineCGAGridWithGemma(rawGrid, objectType);
 
     const framePath = path.join(generatedDir, `output_${hash}_frame${i}.png`);
     await renderCGAGridToImage(refinedGrid, framePath);
@@ -268,8 +360,8 @@ export async function generateGemmaDiffAnimFrames(
   const framesData: string[] = [];
 
   for (let i = 0; i < 4; i++) {
-    const rawGrid = getCGAGridForObject(objectType, i);
-    const refinedGrid = refineCGAGridWithGemma(rawGrid, objectType);
+    const rawGrid = await getCGAGridForObject(objectType, i);
+    const refinedGrid = await refineCGAGridWithGemma(rawGrid, objectType);
 
     const framePath = path.join(generatedDir, `output_${hash}_frame${i}.png`);
     await renderCGAGridToImage(refinedGrid, framePath);

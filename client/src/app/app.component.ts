@@ -58,6 +58,7 @@ import { DialogComponent } from './dialog/dialog.component';
 import { PopupComponent } from './popup/popup.component';
 import { FormsModule } from '@angular/forms';
 import { LivingCanvasStage } from '../game/LivingCanvas';
+import { GemmaModelService, GemmaStatus } from './services/gemma-model.service';
 
 import { environment } from './../environments/environment';
 
@@ -131,11 +132,24 @@ export class AppComponent implements AfterViewInit {
   @ViewChild('gameContainer', { read: ViewContainerRef })
   gameContainer: ViewContainerRef;
   currentScene: string = 'IOPuzzle_Fire';
+  isLocalOnlyMode: boolean = environment.localOnly || false;
   gameSettings: any = {
-    imageGenerator: 'imagen',
-    imageAnalysis: 'gemini',
+    imageGenerator: (environment.localOnly || false) ? 'gemma-cga' : 'imagen',
+    imageAnalysis: (environment.localOnly || false) ? 'gemma-mediapipe' : 'gemini',
     visualStyle: 'realistic',
   };
+
+  gemmaStatus: GemmaStatus = { state: 'idle', progress: 0, message: '' };
+
+  constructor(public gemmaModelService: GemmaModelService) {
+    this.gemmaModelService.status$.subscribe((status) => {
+      this.gemmaStatus = status;
+    });
+  }
+
+  isServerModel(modelKey: string): boolean {
+    return ['imagen', 'gemini', 'gemini-anim', 'veo', 'omni'].includes(modelKey);
+  }
 
   showGameHelp = false;
   showAboutDemo = false;
@@ -331,7 +345,15 @@ export class AppComponent implements AfterViewInit {
   }
 
   setConfig(key: string, value: any) {
+    if (this.isLocalOnlyMode && this.isServerModel(value)) {
+      console.warn(`[Local-Only Build] Model '${value}' is disabled in local-only mode.`);
+      return;
+    }
     this.gameSettings[key] = value;
+    if (key === 'imageGenerator' || key === 'imageAnalysis') {
+      const label = this.getSelectedLabel(key);
+      console.log(`%c[Gemma / Model Selected] Configured ${key} -> ${label} (${value})`, 'color: #8ea8f9; font-weight: bold;');
+    }
     this.updatePhaser();
 
     // Update assets in the current scene without reloading

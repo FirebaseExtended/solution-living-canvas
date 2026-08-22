@@ -212,15 +212,22 @@
       <div class="selector-box">
         <button class="selector-trigger" type="button">
           <span class="selected-text">{{ getSelectedLabel('imageAnalysis') }}</span>
-          <span class="options-hint">+2 models ▾</span>
+          <span class="options-hint">+3 models ▾</span>
         </button>
         <div class="selector-menu">
           <div class="selector-header">Server Models</div>
           <div class="selector-option" 
-               (click)="setConfig('imageAnalysis', 'gemini')" 
-               [class.active]="gameSettings.imageAnalysis === 'gemini'"
-               [class.disabled]="isLocalOnlyMode && isServerModel('gemini')"
-               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
+               (click)="setConfig('imageAnalysis', 'gemini-3.7-flash')" 
+               [class.active]="gameSettings.imageAnalysis === 'gemini-3.7-flash' || gameSettings.imageAnalysis === 'gemini'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('gemini-3.7-flash')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini-3.7-flash')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
+            Gemini 3.7 Flash
+          </div>
+          <div class="selector-option" 
+               (click)="setConfig('imageAnalysis', 'gemini-2.5-flash')" 
+               [class.active]="gameSettings.imageAnalysis === 'gemini-2.5-flash'"
+               [class.disabled]="isLocalOnlyMode && isServerModel('gemini-2.5-flash')"
+               [attr.data-tooltip]="(isLocalOnlyMode && isServerModel('gemini-2.5-flash')) ? 'Download the code and run with Gemini or on Google Cloud to access cloud models.' : null">
             Gemini 2.5 Flash
           </div>
 
@@ -234,6 +241,7 @@
         </div>
       </div>
     </div>
+
 
     <div class="settings-group">
       <label class="group-label">Art style</label>

@@ -947,23 +947,29 @@ export class LivingCanvasStage extends Scene {
     } else if (this.gameSettings.imageAnalysis === 'chrome-llm') {
       console.log('%c[Gemma Model] Accessing local Chrome Built-in Model (window.ai.languageModel)...', 'color: #8ea8f9; font-weight: bold;');
       return this.analyzeImageWithChromeLLM(b64);
-    } else {
-      console.log('[Server Model] Loading Gemini 2.5 Flash analysis model...');
     }
+
+    const modelToUse = this.gameSettings.imageAnalysis === 'gemini-2.5-flash'
+      ? 'gemini-2.5-flash'
+      : (this.gameSettings.imageAnalysis === 'gemini-3.7-flash' || this.gameSettings.imageAnalysis === 'gemini' ? 'gemini-3.7-flash' : this.gameSettings.imageAnalysis);
+
+    console.log(`[Server Model] Loading ${modelToUse} analysis model...`);
 
     const endpoint = 'analyseImage';
     const url = this.constructServerUrl(endpoint);
-    console.log(`[Model Analysis] Dispatching drawing payload to ${endpoint}...`);
+    console.log(`[Model Analysis] Dispatching drawing payload to ${endpoint} with model ${modelToUse}...`);
 
     const response = await fetch(url, {
       method: 'POST',
-      body: new URLSearchParams({
+      body: JSON.stringify({
         prompt: b64,
+        model: modelToUse,
       }),
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Content-Type': 'application/json',
       },
     });
+
 
     if (!response.ok) {
       console.error(`Error in sendImageDataToServerForAnalysis (${endpoint}):`, response);

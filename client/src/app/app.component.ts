@@ -135,7 +135,7 @@ export class AppComponent implements AfterViewInit {
   isLocalOnlyMode: boolean = environment.localOnly || false;
   gameSettings: any = {
     imageGenerator: (environment.localOnly || false) ? 'gemma-cga' : 'imagen',
-    imageAnalysis: (environment.localOnly || false) ? 'gemma-mediapipe' : 'gemini',
+    imageAnalysis: (environment.localOnly || false) ? 'gemma-mediapipe' : 'gemini-3.7-flash',
     visualStyle: 'realistic',
   };
 
@@ -148,8 +148,9 @@ export class AppComponent implements AfterViewInit {
   }
 
   isServerModel(modelKey: string): boolean {
-    return ['imagen', 'gemini', 'gemini-anim', 'veo', 'omni'].includes(modelKey);
+    return ['imagen', 'gemini', 'gemini-anim', 'veo', 'omni', 'gemini-3.7-flash', 'gemini-2.5-flash'].includes(modelKey);
   }
+
 
   showGameHelp = false;
   showAboutDemo = false;
@@ -327,12 +328,15 @@ export class AppComponent implements AfterViewInit {
       return labels[val] || 'Select Model';
     } else if (category === 'imageAnalysis') {
       const labels: Record<string, string> = {
-        'gemini': 'Gemini 2.5 Flash',
+        'gemini-3.7-flash': 'Gemini 3.7 Flash',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash',
+        'gemini': 'Gemini 3.7 Flash',
         'gemma-mediapipe': 'Gemma 4 (MediaPipe)',
         'chrome-llm': 'Chrome Built-in Model',
       };
-      return labels[val] || 'Gemini 2.5 Flash';
+      return labels[val] || 'Gemini 3.7 Flash';
     } else if (category === 'visualStyle') {
+
       const labels: Record<string, string> = {
         'realistic': 'Realistic',
         'cartoon': 'Cartoon',

@@ -10,7 +10,7 @@
       {
         "source": "**",
         "run": {
-          "serviceId": "living-canvas-prod-2-july",
+          "serviceId": "living-canvas-prod-2-july-32458c1c",
           "region": "us-central1"
         }
       }

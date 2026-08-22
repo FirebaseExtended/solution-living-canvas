@@ -34,7 +34,6 @@ server/.env
 
 # Build output directories
 /server/dist
-/server/public
 /client/dist
 .firebase
 

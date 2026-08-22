@@ -424,6 +424,19 @@ app.post("/textToCommand", async (req: Request, res: Response) => {
   }
 });
 
+// Serve index.html for root and SPA routes
+app.get("*", (req: Request, res: Response, next: NextFunction) => {
+  // If it is an API route or file with extension that was not handled, let it pass to 404/errorHandler
+  if (req.path.startsWith("/api") || req.path.includes(".")) {
+    return next();
+  }
+  const indexPath = join(publicPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  next();
+});
+
 // Apply error handling middleware last
 app.use(errorHandler);
 

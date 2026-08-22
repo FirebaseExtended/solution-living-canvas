@@ -29,6 +29,18 @@ const ai = apiKey
       location: location || "us-central1",
     });
 
+interface AnalysisResult {
+  type: string;
+  attributes?: string[];
+  shouldRemove?: boolean;
+}
+
+interface CommandResult {
+  verb: string;
+  target: string;
+}
+
+
 
 function getAttributes() {
   let attributes = "";

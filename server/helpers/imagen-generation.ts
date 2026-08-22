@@ -27,8 +27,11 @@ const { helpers } = aiplatform;
 const { PredictionServiceClient } = aiplatform.v1;
 
 const ai = new GoogleGenAI({
-  apiKey: apiKey,
+  vertexai: true,
+  project: projectId || "living-canvas-prod-3",
+  location: location || "us-central1",
 });
+
 
 // Instantiates a client
 const predictionServiceClient = new PredictionServiceClient({
@@ -177,6 +180,9 @@ async function generateImageBuffer(
   }
 }
 
+import { generateImageWithGemini } from "./gemini-generation";
+import { generateImageWithGemmaCGA } from "./gemma-cga-generation";
+
 // Main function with Promise wrapper and file saving
 export async function generateImageWithImagen(
   promptId: string,
@@ -202,10 +208,26 @@ export async function generateImageWithImagen(
     console.log(`Saved image ${filepath}`);
     return filepath;
   } catch (error) {
-    console.error("Error in generateImageWithImagen:", error);
-    throw error;
+    console.warn("Imagen generation failed, falling back to Gemini / Gemma CGA generator:", error);
+    try {
+      return await generateImageWithGemini(
+        "gemini_generation",
+        objectType,
+        "",
+        visualStyle,
+        filepath
+      );
+    } catch (geminiError) {
+      console.warn("Gemini fallback failed, using Gemma CGA generator:", geminiError);
+      return await generateImageWithGemmaCGA(
+        objectType,
+        visualStyle,
+        filepath
+      );
+    }
   }
 }
 
 // Export the base64 generation function for direct access
 export { generateImageBuffer };
+

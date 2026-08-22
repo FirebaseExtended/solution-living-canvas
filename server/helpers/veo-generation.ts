@@ -30,12 +30,15 @@ import ffmpeg from "ffmpeg-static";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
 
-const { apiKey } = getGoogleCloudConfig();
+const { projectId, location, apiKey } = getGoogleCloudConfig();
 
-// Initialize the Google Generative AI client with API key
+// Initialize the Google Generative AI client with Vertex AI
 const ai = new GoogleGenAI({
-  apiKey: apiKey,
+  vertexai: true,
+  project: projectId || "living-canvas-prod-3",
+  location: location || "us-central1",
 });
+
 
 interface GenerateStaticImageResult {
   hash: string;

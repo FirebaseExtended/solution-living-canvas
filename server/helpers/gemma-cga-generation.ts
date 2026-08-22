@@ -29,13 +29,12 @@ import { config as aiConfig } from "./ai-config-helper";
 const execAsync = promisify(exec);
 const { projectId, location, apiKey } = getGoogleCloudConfig();
 
-const ai = apiKey
-  ? new GoogleGenAI({ apiKey })
-  : new GoogleGenAI({
-      vertexai: true,
-      project: projectId,
-      location: location || "us-central1",
-    });
+const ai = new GoogleGenAI({
+  vertexai: true,
+  project: projectId || "living-canvas-prod-3",
+  location: location || "us-central1",
+});
+
 
 export async function queryRemoteGemmaModel(
   prompt: string,

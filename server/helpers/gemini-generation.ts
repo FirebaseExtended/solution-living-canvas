@@ -48,14 +48,13 @@ interface GeminiResponse {
   }>;
 }
 
-// Initialize GoogleGenAI client with apiKey or Vertex AI config
-const ai = apiKey
-  ? new GoogleGenAI({ apiKey })
-  : new GoogleGenAI({
-      vertexai: true,
-      project: projectId,
-      location: location || "us-central1",
-    });
+// Initialize GoogleGenAI client with Vertex AI
+const ai = new GoogleGenAI({
+  vertexai: true,
+  project: projectId || "living-canvas-prod-3",
+  location: location || "us-central1",
+});
+
 
 // Set up generation config
 const generationConfig: GenerationConfig = {

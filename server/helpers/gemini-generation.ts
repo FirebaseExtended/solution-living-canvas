@@ -51,12 +51,15 @@ interface GeminiResponse {
   }>;
 }
 
-// Initialize GoogleGenAI client with Vertex AI
-const ai = new GoogleGenAI({
-  vertexai: true,
-  project: projectId || "living-canvas-prod-3",
-  location: location || "us-central1",
-});
+// Initialize GoogleGenAI client with API key or Vertex AI fallback
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId || "living-canvas-prod-3",
+      location: location || "us-central1",
+    });
+
 
 
 // Set up generation config

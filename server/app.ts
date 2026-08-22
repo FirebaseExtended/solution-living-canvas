@@ -139,7 +139,9 @@ app.post("/analyseImage", async (req: Request, res: Response) => {
       return;
     }
 
-    const response = await imageToConfig(trimmedData);
+    const requestedModel = req.body.model || (req.query.model as string) || undefined;
+    const response = await imageToConfig(trimmedData, requestedModel);
+
     
     console.log("response", response);
 

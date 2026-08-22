@@ -32,12 +32,15 @@ import { cacheManager } from "./cache-manager";
 
 const { projectId, location, apiKey } = getGoogleCloudConfig();
 
-// Initialize the Google Generative AI client with Vertex AI
-const ai = new GoogleGenAI({
-  vertexai: true,
-  project: projectId || "living-canvas-prod-3",
-  location: location || "us-central1",
-});
+// Initialize the Google Generative AI client with API key or Vertex AI fallback
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId || "living-canvas-prod-3",
+      location: location || "us-central1",
+    });
+
 
 
 interface GenerateStaticImageResult {

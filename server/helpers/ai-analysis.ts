@@ -14,45 +14,21 @@
  * limitations under the License.
  */
 
-import { SafetySetting, VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenAI } from "@google/genai";
 import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
 
-const { projectId, location } = getGoogleCloudConfig();
+const { projectId, location, apiKey } = getGoogleCloudConfig();
 
-interface AnalysisResult {
-  type: string;
-  attributes?: string[];
-  shouldRemove?: boolean;
-}
+// Initialize GoogleGenAI with API Key or Vertex AI fallback
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey })
+  : new GoogleGenAI({
+      vertexai: true,
+      project: projectId || "living-canvas-prod-3",
+      location: location || "us-central1",
+    });
 
-interface CommandResult {
-  verb: string;
-  target: string;
-}
-
-interface Schema {
-  type: string;
-  properties: {
-    [key: string]: {
-      type: string;
-      description?: string;
-      properties?: {
-        [key: string]: {
-          type: string;
-          description?: string;
-        };
-      };
-    };
-  };
-  required?: string[];
-}
-
-// Initialize Vertex AI
-const vertexAI = new VertexAI({
-  project: projectId,
-  location: location,
-});
 
 function getAttributes() {
   let attributes = "";
@@ -79,7 +55,8 @@ function getTypes() {
 
 // [START image_to_config]
 export async function imageToConfig(
-  base64Image: string
+  base64Image: string,
+  modelName?: string
 ): Promise<AnalysisResult> {
   try {
     if (!base64Image) {
@@ -87,6 +64,7 @@ export async function imageToConfig(
     }
 
     const types = getTypes();
+    const activeModel = modelName || aiConfig.models["analysis_gemini"] || "gemini-3.7-flash";
 
     // "analysis_initialGuess": "If this image contains a drawing,
     // which of these options are the best way to describe this image?
@@ -100,7 +78,8 @@ export async function imageToConfig(
     const result = await sendMultimodalRequest(
       textPrompt,
       base64Image,
-      "imageToConfig"
+      "imageToConfig",
+      activeModel
     );
 
     if (result === "__BLOCKED__") {
@@ -148,7 +127,8 @@ export async function imageToConfig(
       const genericGuessText = await sendMultimodalRequest(
         aiConfig.prompts["analysis_genericGuess"],
         base64Image,
-        "imageToConfig"
+        "imageToConfig",
+        activeModel
       );
 
       if (genericGuessText === "__BLOCKED__") {
@@ -185,8 +165,10 @@ export async function imageToConfig(
           attributes: attributes,
         }),
         false,
-        "attributesList"
+        "attributesList",
+        activeModel
       );
+
 
       // ...
       // [END image_to_config]
@@ -255,7 +237,8 @@ export async function imageToConfig(
 
 export async function imageToText(
   base64Image: string,
-  textPrompt: string
+  textPrompt: string,
+  modelName?: string
 ): Promise<string> {
   try {
     if (!base64Image) {
@@ -265,10 +248,13 @@ export async function imageToText(
       throw new Error("No text prompt provided");
     }
 
+    const activeModel = modelName || aiConfig.models["analysis_gemini"] || "gemini-3.7-flash";
+
     const result = await sendMultimodalRequest(
       textPrompt,
       base64Image,
-      "imageToText"
+      "imageToText",
+      activeModel
     );
 
     if (!result) {
@@ -283,11 +269,20 @@ export async function imageToText(
   }
 }
 
+
+interface Schema {
+  type: string;
+  properties: {
+    [key: string]: any;
+  };
+  required?: string[];
+}
+
 async function sendMultimodalRequest(
   textPrompt: string,
   base64Image: string | false,
   schemaType: string,
-  model: string = aiConfig.models["analysis_gemini"] || "gemini-2.5-flash"
+  model: string = aiConfig.models["analysis_gemini"] || "gemini-3.7-flash"
 ): Promise<string> {
   try {
     if (!textPrompt) {
@@ -295,7 +290,7 @@ async function sendMultimodalRequest(
     }
 
     console.log(
-      `Preparing multimodal request... with schema ${schemaType} and with text: ${textPrompt}`
+      `Preparing multimodal request with model ${model} (schema: ${schemaType})...`
     );
 
     let schema: Schema | null = null;
@@ -336,8 +331,6 @@ async function sendMultimodalRequest(
               type: "INTEGER",
             };
         }
-
-        console.log("Schema:", JSON.stringify(schema, null, 2));
         break;
       case "textToCommand":
         schema = {
@@ -359,69 +352,49 @@ async function sendMultimodalRequest(
         break;
     }
 
-    const generativeVisionModel = vertexAI.getGenerativeModel({
+    const contents: any[] = [{ text: textPrompt }];
+    if (base64Image !== false) {
+      contents.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: base64Image,
+        },
+      });
+    }
+
+    const genConfig: any = {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+      topP: 0.1,
+      topK: 1,
+    };
+    if (schema !== null) {
+      genConfig.responseSchema = schema;
+    }
+
+    const response = await ai.models.generateContent({
       model: model,
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.1,
-        topP: 0.1,
-        topK: 1,
-      },
-      safetySettings: aiConfig.getSafetySettings() as SafetySetting[],
+      contents: contents,
+      config: genConfig,
     });
 
-    if (schema !== null) {
-      // @ts-ignore Property 'generationConfig' is private and only accessible within class 'GenerativeModel'.
-      generativeVisionModel.generationConfig.responseSchema = schema;
-    }
-
-    const textPart = { text: textPrompt };
-    const request: any = {
-      contents: [{ role: "user", parts: [textPart] }],
-    };
-
-    if (base64Image !== false) {
-      const filePart = {
-        inline_data: { data: base64Image, mimeType: "image/png" },
-      };
-      request.contents[0].parts.push(filePart);
-    }
-
-    const streamingResult = await generativeVisionModel.generateContentStream(
-      request
-    );
-    const contentResponse = await streamingResult.response;
-    console.log(
-      "Content response finish reason:",
-      contentResponse?.candidates?.[0]
-    );
-
-    // Check if the response is blocked by the safety settings
-    if (contentResponse?.candidates?.[0]?.finishReason === "SAFETY") {
+    const candidate = response.candidates?.[0];
+    if (candidate?.finishReason === "SAFETY") {
       return "__BLOCKED__";
     }
-    console.log(
-      "Content response candidates:",
-      contentResponse?.candidates?.[0]?.content?.parts?.[0]?.text
-    );
 
-    if (!contentResponse?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    const text = response.text || candidate?.content?.parts?.[0]?.text;
+    if (!text) {
       throw new Error("Invalid response format from AI model");
     }
 
-    return contentResponse.candidates[0].content.parts[0].text;
+    return text;
   } catch (error: any) {
     console.error("Error in sendMultimodalRequest:", error);
-    if (error.code === 429) {
-      throw new Error("Rate limit exceeded. Please try again later.");
-    } else if (error.code === 400) {
-      throw new Error("Invalid request parameters");
-    } else if (error.code === 401 || error.code === 403) {
-      throw new Error("Authentication failed. Please check your credentials.");
-    }
     throw error;
   }
 }
+
 
 function getVerbs() {
   let verbList = "";
@@ -454,11 +427,13 @@ function getTargetList(currentTargets: string[]) {
 // [START text_to_command]
 export async function textToCommand(
   textCommand: string | null,
-  currentTargets: any
+  currentTargets: any,
+  modelName?: string
 ): Promise<CommandResult> {
   try {
     let verbList = getVerbs();
     let targetList = getTargetList(currentTargets);
+    const activeModel = modelName || aiConfig.models["analysis_gemini"] || "gemini-3.7-flash";
 
     // "analysis_textToCommand": You are a JSON parser.
     // Your task is to extract a verb and target from the
@@ -484,8 +459,10 @@ export async function textToCommand(
         targets: targetList,
       }),
       false,
-      "textToCommand"
+      "textToCommand",
+      activeModel
     );
+
 
     // ...
     // [END text_to_command]

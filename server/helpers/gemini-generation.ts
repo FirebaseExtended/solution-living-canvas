@@ -20,6 +20,9 @@ import sharp from "sharp";
 import { getGoogleCloudConfig } from "../config";
 import { config as aiConfig } from "./ai-config-helper";
 import { cacheManager } from "./cache-manager";
+import { generateImageWithGemmaCGA } from "./gemma-cga-generation";
+import path from "path";
+
 
 const { projectId, location, apiKey } = getGoogleCloudConfig();
 
@@ -126,10 +129,22 @@ async function generateImageBuffer(
 
     return base64Image;
   } catch (error) {
-    console.error("Error in generateImageBuffer:", error);
+    console.warn("Error in generateImageBuffer (gemini), falling back to Gemma CGA sprite generator:", error);
+    try {
+      const tempPath = path.join("generated", `fallback_${Date.now()}.png`);
+      await generateImageWithGemmaCGA(objectType, visualStyle, tempPath);
+      if (fs.existsSync(tempPath)) {
+        const b64 = fs.readFileSync(tempPath, { encoding: "base64" });
+        try { fs.unlinkSync(tempPath); } catch (_) {}
+        return b64;
+      }
+    } catch (fallbackError) {
+      console.error("Gemma CGA fallback in generateImageBuffer also failed:", fallbackError);
+    }
     throw error;
   }
 }
+
 
 // [START image_generation]
 export async function generateImageWithGemini(
@@ -227,10 +242,17 @@ export async function generateImageWithGemini(
     console.log(`Saved image ${filepath}`);
     return filepath;
   } catch (error) {
-    console.error("Error in generateImageWithGemini:", error);
-    throw error;
+    console.warn("Error in generateImageWithGemini, using Gemma CGA sprite generator fallback:", error);
+    try {
+      await generateImageWithGemmaCGA(objectType, visualStyle, filepath);
+      return filepath;
+    } catch (fallbackError) {
+      console.error("Fallback also failed:", fallbackError);
+      throw error;
+    }
   }
 }
+
 
 async function sendGeminiMessage(
   vertexChat: any,

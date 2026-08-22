@@ -19,7 +19,7 @@ if (!buffer.SlowBuffer) {
   (buffer as any).SlowBuffer = class SlowBuffer extends Buffer {};
 }
 
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import bodyParser from "body-parser";
 import { join } from "path";
 import cors from "cors";
@@ -44,8 +44,8 @@ import { config } from "./helpers/ai-config-helper";
 const { port } = getServerConfig();
 const app = express();
 
-// Error handling middleware
-const errorHandler = (err: Error, _req: Request, res: Response) => {
+// Error handling middleware (must have 4 arguments in Express)
+const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Error:", err);
   res.status(500).json({
     error: err.message || "Internal server error",
@@ -63,25 +63,43 @@ const validateImageRequest = (req: Request, res: Response) => {
 };
 
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
+// Resolve paths relative to binary and working directory
+const generatedPath = fs.existsSync(join(__dirname, "../generated"))
+  ? join(__dirname, "../generated")
+  : join(process.cwd(), "generated");
+
+const publicPath = fs.existsSync(join(__dirname, "../public/browser"))
+  ? join(__dirname, "../public/browser")
+  : fs.existsSync(join(process.cwd(), "server/public/browser"))
+  ? join(process.cwd(), "server/public/browser")
+  : fs.existsSync(join(process.cwd(), "public/browser"))
+  ? join(process.cwd(), "public/browser")
+  : join(__dirname, "public/browser");
+
+const resourcesPath = fs.existsSync(join(__dirname, "../resources"))
+  ? join(__dirname, "../resources")
+  : join(process.cwd(), "resources");
 
 // Create the 'generated' directory if it doesn't exist
-fs.mkdir("generated", { recursive: true }, (err) => {
-  if (err) {
-    console.error("Error creating 'generated' directory:", err);
-  }
-});
+try {
+  fs.mkdirSync(generatedPath, { recursive: true });
+} catch (err) {
+  console.error("Error creating 'generated' directory:", err);
+}
 
 // Setup static file serving and index route
-app.use(express.static("resources"));
-app.use("/generated", express.static("generated"));
+app.use(express.static(resourcesPath));
+app.use("/generated", express.static(generatedPath));
 
 app.get("/test", (_req: Request, res: Response) => {
   res.send(`Hello world from real server this time! On port: ${port}`);
 });
 
-app.use(express.static("public/browser"));
+app.use(express.static(publicPath));
+
 
 app.use("/solution", express.static("solution"));
 app.use("/external-assets", express.static("solution/external-assets"));

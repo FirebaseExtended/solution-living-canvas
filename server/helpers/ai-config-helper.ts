@@ -80,9 +80,18 @@ interface CacheConfig {
   cacheDir: string;
 }
 
+import path from "path";
+
+const configPath = fs.existsSync("./ai-config.json")
+  ? "./ai-config.json"
+  : fs.existsSync("./server/ai-config.json")
+  ? "./server/ai-config.json"
+  : path.join(__dirname, "../ai-config.json");
+
 const aiConfig: AIConfig = JSON.parse(
-  fs.readFileSync("./ai-config.json", "utf8")
+  fs.readFileSync(configPath, "utf8")
 );
+
 
 function stringTemplateParser(
   expression: string,

@@ -1,4 +1,10 @@
 {
+  "name": "solution-living-canvas",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm --prefix client ci && npm --prefix client run build && npm --prefix server ci && npm --prefix server run build",
+    "start": "cd server && npm start"
+  },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",

@@ -384,6 +384,10 @@ async function sendMultimodalRequest(
       genConfig.responseSchema = schema;
     }
 
+    if (model === "gemini-2.5-flash" || model === "gemini-2.5-flash-lite") {
+      model = "gemini-3.5-flash";
+    }
+
     try {
       const response = await ai.models.generateContent({
         model: model,
@@ -404,12 +408,12 @@ async function sendMultimodalRequest(
       return text;
     } catch (primaryError) {
       console.warn(
-        `Primary model ${model} failed, attempting fallback to gemini-2.5-flash:`,
+        `Primary model ${model} failed, attempting fallback to gemini-3.5-flash:`,
         primaryError instanceof Error ? primaryError.message : primaryError
       );
-      if (model !== "gemini-2.5-flash") {
+      if (model !== "gemini-3.5-flash") {
         const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.5-flash",
           contents: contents,
           config: genConfig,
         });

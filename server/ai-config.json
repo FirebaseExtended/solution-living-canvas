@@ -2,7 +2,7 @@
   "models": {
     "analysis_gemini": "gemini-3.7-flash",
     "analysis_gemini_3_7": "gemini-3.7-flash",
-    "analysis_gemini_2_5": "gemini-2.5-flash",
+    "analysis_gemini_3_5": "gemini-3.5-flash",
     "generation_gemini": "gemini-3.1-flash-image",
     "generation_imagen": "gemini-3.1-flash-image",
     "veo_generation": "veo-3.1-fast-generate-preview",

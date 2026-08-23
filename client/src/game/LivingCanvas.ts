@@ -949,8 +949,8 @@ export class LivingCanvasStage extends Scene {
       return this.analyzeImageWithChromeLLM(b64);
     }
 
-    const modelToUse = this.gameSettings.imageAnalysis === 'gemini-2.5-flash'
-      ? 'gemini-2.5-flash'
+    const modelToUse = (this.gameSettings.imageAnalysis === 'gemini-3.5-flash' || this.gameSettings.imageAnalysis === 'gemini-2.5-flash')
+      ? 'gemini-3.5-flash'
       : (this.gameSettings.imageAnalysis === 'gemini-3.7-flash' || this.gameSettings.imageAnalysis === 'gemini' ? 'gemini-3.7-flash' : this.gameSettings.imageAnalysis);
 
     console.log(`[Server Model] Loading ${modelToUse} analysis model...`);

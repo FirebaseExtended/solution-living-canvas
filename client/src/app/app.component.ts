@@ -148,7 +148,7 @@ export class AppComponent implements AfterViewInit {
   }
 
   isServerModel(modelKey: string): boolean {
-    return ['imagen', 'gemini', 'gemini-anim', 'veo', 'omni', 'gemini-3.7-flash', 'gemini-2.5-flash'].includes(modelKey);
+    return ['imagen', 'gemini', 'gemini-anim', 'veo', 'omni', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'].includes(modelKey);
   }
 
 
@@ -329,7 +329,8 @@ export class AppComponent implements AfterViewInit {
     } else if (category === 'imageAnalysis') {
       const labels: Record<string, string> = {
         'gemini-3.7-flash': 'Gemini 3.7 Flash',
-        'gemini-2.5-flash': 'Gemini 2.5 Flash',
+        'gemini-3.5-flash': 'Gemini 3.5 Flash',
+        'gemini-2.5-flash': 'Gemini 3.5 Flash',
         'gemini': 'Gemini 3.7 Flash',
         'gemma-mediapipe': 'Gemma 4 (MediaPipe)',
         'chrome-llm': 'Chrome Built-in Model',
